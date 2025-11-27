@@ -338,7 +338,7 @@ CRITICAL: Always create complete, well-structured models with proper hierarchy a
 `;
 
 // Enhanced request type detection with context awareness and scoring
-function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animation' | 'modeling' {
+export function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animation' | 'modeling' {
   const lowerPrompt = prompt.toLowerCase();
   
   // Enhanced keyword sets with weights and context
@@ -544,7 +544,7 @@ export interface ModelConfig {
   displayName: string;
 }
 
-const MODEL_CONFIGS: Record<ModelProvider, ModelConfig> = {
+export const MODEL_CONFIGS: Record<ModelProvider, ModelConfig> = {
   'x-ai-grok-4.1-fast-free': {
     provider: 'openrouter',
     modelId: 'x-ai/grok-4.1-fast:free',
