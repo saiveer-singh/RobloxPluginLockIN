@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type ThemePreset = 'dark' | 'light' | 'cyberpunk' | 'minimal' | 'ocean' | 'forest' | 'sunset' | 'midnight';
+export type ThemePreset = 'dark' | 'light' | 'cyberpunk' | 'minimal' | 'ocean' | 'forest' | 'sunset' | 'midnight' | 'dracula' | 'nord';
 
 export interface ThemeColors {
   background: string;
@@ -49,7 +49,7 @@ export interface Settings {
 }
 
 const defaultSettings: Settings = {
-  theme: 'sunset',
+  theme: 'dark',
   fontSize: 'medium',
   animations: true,
   compactMode: false,
@@ -71,7 +71,7 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     background: '#0a0a0a',
     foreground: '#ffffff',
     primary: '#8b5cf6',
-    secondary: '#374151',
+    secondary: '#9ca3af',
     accent: '#f59e0b',
     border: '#374151',
     card: '#1f2937',
@@ -179,6 +179,34 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     error: '#ef4444',
     warning: '#f59e0b',
   },
+  dracula: {
+    background: '#282a36',
+    foreground: '#f8f8f2',
+    primary: '#bd93f9',
+    secondary: '#44475a',
+    accent: '#ff79c6',
+    border: '#44475a',
+    card: '#282a36',
+    input: '#44475a',
+    hover: '#44475a',
+    success: '#50fa7b',
+    error: '#ff5555',
+    warning: '#f1fa8c',
+  },
+  nord: {
+    background: '#2e3440',
+    foreground: '#eceff4',
+    primary: '#88c0d0',
+    secondary: '#4c566a',
+    accent: '#81a1c1',
+    border: '#4c566a',
+    card: '#3b4252',
+    input: '#3b4252',
+    hover: '#434c5e',
+    success: '#a3be8c',
+    error: '#bf616a',
+    warning: '#ebcb8b',
+  },
 };
 
 interface SettingsContextType {
@@ -229,7 +257,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     Object.entries(themeColors).forEach(([key, value]) => {
-      root.style.setProperty(`--color-${key}`, value);
+      // Set the underlying CSS variable that the theme maps to
+      root.style.setProperty(`--val-${key}`, value);
+      if (key === 'primary') {
+         // Also set primary-foreground if not present (simple logic for now)
+         root.style.setProperty('--val-primary-foreground', '#ffffff');
+      }
     });
 
     // Apply font size
