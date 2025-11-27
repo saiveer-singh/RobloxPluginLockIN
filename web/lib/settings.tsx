@@ -2,12 +2,13 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type ThemePreset = 'dark' | 'light' | 'cyberpunk' | 'minimal' | 'ocean' | 'forest' | 'sunset' | 'midnight';
+export type ThemePreset = 'dark' | 'light' | 'cyberpunk' | 'minimal' | 'ocean' | 'forest' | 'sunset' | 'midnight' | 'dracula' | 'nord';
 
 export interface ThemeColors {
   background: string;
   foreground: string;
   primary: string;
+  primaryForeground: string;
   secondary: string;
   accent: string;
   border: string;
@@ -49,7 +50,7 @@ export interface Settings {
 }
 
 const defaultSettings: Settings = {
-  theme: 'sunset',
+  theme: 'dark',
   fontSize: 'medium',
   animations: true,
   compactMode: false,
@@ -71,7 +72,8 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     background: '#0a0a0a',
     foreground: '#ffffff',
     primary: '#8b5cf6',
-    secondary: '#374151',
+    primaryForeground: '#ffffff',
+    secondary: '#9ca3af',
     accent: '#f59e0b',
     border: '#374151',
     card: '#1f2937',
@@ -85,7 +87,8 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     background: '#ffffff',
     foreground: '#1f2937',
     primary: '#6366f1',
-    secondary: '#6b7280',
+    primaryForeground: '#ffffff',
+    secondary: '#4b5563',
     accent: '#f59e0b',
     border: '#e5e7eb',
     card: '#ffffff',
@@ -99,7 +102,8 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     background: '#0a0a0a',
     foreground: '#00ff88',
     primary: '#ff0080',
-    secondary: '#1a1a2e',
+    primaryForeground: '#ffffff',
+    secondary: '#b3b3b3',
     accent: '#00ff88',
     border: '#ff0080',
     card: '#16213e',
@@ -113,6 +117,7 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     background: '#ffffff',
     foreground: '#2d3748',
     primary: '#4a5568',
+    primaryForeground: '#ffffff',
     secondary: '#718096',
     accent: '#718096',
     border: '#e2e8f0',
@@ -127,7 +132,8 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     background: '#0f1419',
     foreground: '#e1e8ed',
     primary: '#1da1f2',
-    secondary: '#192734',
+    primaryForeground: '#ffffff',
+    secondary: '#8899a6',
     accent: '#17bf63',
     border: '#38444d',
     card: '#192734',
@@ -141,7 +147,8 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     background: '#0a1f0f',
     foreground: '#e8f5e8',
     primary: '#4caf50',
-    secondary: '#1b5e20',
+    primaryForeground: '#ffffff',
+    secondary: '#81c784',
     accent: '#8bc34a',
     border: '#2e7d32',
     card: '#1b5e20',
@@ -155,6 +162,7 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     background: '#1a0b2e',
     foreground: '#ffffff',
     primary: '#ff6b6b',
+    primaryForeground: '#ffffff',
     secondary: '#9ca3af',
     accent: '#ffd93d',
     border: '#4a0e4e',
@@ -169,7 +177,8 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     background: '#000000',
     foreground: '#ffffff',
     primary: '#6366f1',
-    secondary: '#1a1a1a',
+    primaryForeground: '#ffffff',
+    secondary: '#a3a3a3',
     accent: '#f59e0b',
     border: '#333333',
     card: '#111111',
@@ -178,6 +187,36 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     success: '#10b981',
     error: '#ef4444',
     warning: '#f59e0b',
+  },
+  dracula: {
+    background: '#282a36',
+    foreground: '#f8f8f2',
+    primary: '#bd93f9',
+    primaryForeground: '#282a36',
+    secondary: '#9CA3AF',
+    accent: '#ff79c6',
+    border: '#44475a',
+    card: '#282a36',
+    input: '#44475a',
+    hover: '#44475a',
+    success: '#50fa7b',
+    error: '#ff5555',
+    warning: '#f1fa8c',
+  },
+  nord: {
+    background: '#2e3440',
+    foreground: '#eceff4',
+    primary: '#88c0d0',
+    primaryForeground: '#2e3440',
+    secondary: '#d8dee9',
+    accent: '#81a1c1',
+    border: '#4c566a',
+    card: '#3b4252',
+    input: '#3b4252',
+    hover: '#434c5e',
+    success: '#a3be8c',
+    error: '#bf616a',
+    warning: '#ebcb8b',
   },
 };
 
@@ -229,8 +268,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     Object.entries(themeColors).forEach(([key, value]) => {
-      root.style.setProperty(`--color-${key}`, value);
+      // Set the underlying CSS variable that the theme maps to
+      root.style.setProperty(`--val-${key}`, value);
     });
+
+    // Handle missing primaryForeground for custom themes that might not have it yet
+    if (!themeColors.primaryForeground) {
+       root.style.setProperty('--val-primary-foreground', '#ffffff');
+    }
 
     // Apply font size
     const fontSizes = {

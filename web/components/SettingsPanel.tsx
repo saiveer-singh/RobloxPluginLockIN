@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Settings, X, Monitor, Zap, MessageSquare, Volume2, Eye, Save, RotateCcw, Cpu, Search, Check, ChevronDown } from 'lucide-react';
-import { useSettings, ThemePreset, themePresets } from '@/lib/settings';
+import { Settings, X, Monitor, Zap, MessageSquare, Volume2, Eye, Save, RotateCcw, Cpu, Search, Check, ChevronDown, Palette } from 'lucide-react';
+import { useSettings, ThemePreset, themePresets, ThemeColors } from '@/lib/settings';
 import type { ModelProvider } from '@/lib/ai';
 import { ModelIcon } from './ModelIcon';
 import { ALL_MODELS, getCategories, type ModelInfo } from '@/lib/models';
@@ -14,7 +14,7 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const { settings, updateSettings, resetToDefaults } = useSettings();
-  const [activeTab, setActiveTab] = useState<'behavior' | 'performance' | 'ai' | 'models'>('behavior');
+  const [activeTab, setActiveTab] = useState<'behavior' | 'appearance' | 'performance' | 'ai' | 'models'>('behavior');
   const [modelSearchQuery, setModelSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   
@@ -77,6 +77,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
   const tabs = [
     { id: 'behavior' as const, label: 'Behavior', icon: Monitor },
+    { id: 'appearance' as const, label: 'Appearance', icon: Palette },
     { id: 'performance' as const, label: 'Performance', icon: Zap },
     { id: 'ai' as const, label: 'AI', icon: MessageSquare },
     { id: 'models' as const, label: 'Models', icon: Cpu },
@@ -213,6 +214,160 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         <div
                           className={`w-4 h-4 bg-white rounded-full transition-transform ${
                             settings.soundEnabled ? 'translate-x-5' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'appearance' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-4">Theme</h3>
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    {(Object.keys(themePresets) as ThemePreset[]).map((theme) => (
+                      <button
+                        key={theme}
+                        onClick={() => updateSettings({ theme })}
+                        className={`
+                          p-3 rounded-lg border text-left transition-all
+                          ${settings.theme === theme
+                            ? 'border-primary ring-1 ring-primary'
+                            : 'border-border hover:border-primary/50'}
+                        `}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <div
+                            className="w-4 h-4 rounded-full border border-white/10"
+                            style={{ background: themePresets[theme].background }}
+                          />
+                          <span className="text-sm font-medium capitalize text-foreground">
+                            {theme}
+                          </span>
+                        </div>
+                        <div className="flex gap-1">
+                          <div
+                            className="h-2 w-full rounded-full"
+                            style={{ background: themePresets[theme].primary }}
+                          />
+                          <div
+                            className="h-2 w-full rounded-full"
+                            style={{ background: themePresets[theme].secondary }}
+                          />
+                          <div
+                            className="h-2 w-full rounded-full"
+                            style={{ background: themePresets[theme].accent }}
+                          />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <h3 className="text-lg font-semibold text-foreground mb-4">Custom Colors</h3>
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    {Object.entries(settings.customColors || {}).map(([key, value]) => (
+                      <div key={key} className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-foreground capitalize">
+                          {key}
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={value as string}
+                            onChange={(e) => updateSettings({
+                              customColors: {
+                                ...settings.customColors,
+                                [key]: e.target.value
+                              }
+                            })}
+                            className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
+                          />
+                          <button
+                            onClick={() => {
+                              const newColors = { ...settings.customColors };
+                              delete newColors[key as keyof ThemeColors];
+                              updateSettings({ customColors: newColors });
+                            }}
+                            className="p-1 hover:bg-hover rounded"
+                          >
+                            <X className="w-4 h-4 text-secondary" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="col-span-2">
+                      <button
+                        onClick={() => {
+                          const currentThemeColors = themePresets[settings.theme];
+                          updateSettings({
+                            customColors: {
+                              ...settings.customColors,
+                              primary: currentThemeColors.primary
+                            }
+                          });
+                        }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        + Add Custom Color Override
+                      </button>
+                    </div>
+                  </div>
+
+                  <h3 className="text-lg font-semibold text-foreground mb-4">Display</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Font Size</label>
+                        <p className="text-xs text-secondary">Adjust text size</p>
+                      </div>
+                      <select
+                        value={settings.fontSize}
+                        onChange={(e) => updateSettings({ fontSize: e.target.value as any })}
+                        className="px-3 py-1 bg-input border border-border rounded text-sm text-foreground"
+                      >
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Animations</label>
+                        <p className="text-xs text-secondary">Enable UI animations</p>
+                      </div>
+                       <button
+                         onClick={() => updateSettings({ animations: !settings.animations })}
+                         className={`w-10 h-6 rounded-full transition-colors ${
+                           settings.animations ? 'bg-[var(--color-success)]' : 'bg-[var(--color-secondary)]'
+                         }`}
+                       >
+                        <div
+                          className={`w-4 h-4 bg-white rounded-full transition-transform ${
+                            settings.animations ? 'translate-x-5' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Compact Mode</label>
+                        <p className="text-xs text-secondary">Reduce spacing in UI</p>
+                      </div>
+                       <button
+                         onClick={() => updateSettings({ compactMode: !settings.compactMode })}
+                         className={`w-10 h-6 rounded-full transition-colors ${
+                           settings.compactMode ? 'bg-[var(--color-success)]' : 'bg-[var(--color-secondary)]'
+                         }`}
+                       >
+                        <div
+                          className={`w-4 h-4 bg-white rounded-full transition-transform ${
+                            settings.compactMode ? 'translate-x-5' : 'translate-x-1'
                           }`}
                         />
                       </button>
