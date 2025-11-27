@@ -1,19 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  /* Sunset theme variables */
-  --color-background: #1a0b2e;
-  --color-foreground: #ffffff;
-  --color-primary: #ff6b6b;
-  --color-secondary: #9ca3af;
-  --color-accent: #ffd93d;
-  --color-border: #4a0e4e;
-  --color-card: #0f0a1a;
-  --color-input: #0f0a1a;
-  --color-hover: #4a0e4e;
-  --color-success: #6bcf7f;
-  --color-error: #ff6b6b;
-  --color-warning: #ffd93d;
+  /* Default dark theme variables */
+  --val-background: #0a0a0a;
+  --val-foreground: #ffffff;
+  --val-primary: #8b5cf6;
+  --val-primary-foreground: #ffffff;
+  --val-secondary: #9ca3af;
+  --val-accent: #f59e0b;
+  --val-border: #374151;
+  --val-card: #1f2937;
+  --val-input: #111827;
+  --val-hover: #374151;
+  --val-success: #10b981;
+  --val-error: #ef4444;
+  --val-warning: #f59e0b;
 
   /* Font and animation variables */
   --font-size-base: 16px;
@@ -26,11 +27,25 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --color-background: var(--val-background);
+  --color-foreground: var(--val-foreground);
+  --color-primary: var(--val-primary);
+  --color-primary-foreground: var(--val-primary-foreground);
+  --color-secondary: var(--val-secondary);
+  --color-accent: var(--val-accent);
+  --color-border: var(--val-border);
+  --color-card: var(--val-card);
+  --color-input: var(--val-input);
+  --color-hover: var(--val-hover);
+  --color-success: var(--val-success);
+  --color-error: var(--val-error);
+  --color-warning: var(--val-warning);
 }
 
 body {
-  background: var(--color-background);
-  color: var(--color-foreground);
+  background: var(--val-background);
+  color: var(--val-foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   font-size: var(--font-size-base);
   transition: background-color var(--animation-duration), color var(--animation-duration);

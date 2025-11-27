@@ -529,18 +529,18 @@ export default function Home() {
     };
 
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+      <div className="flex h-screen items-center justify-center bg-background text-foreground">
         <div className="text-center space-y-8 max-w-md mx-auto p-8">
           <div className="space-y-4">
-            <h1 className="text-4xl font-bold text-white">RobloxGen AI</h1>
-            <p className="text-gray-300 text-lg">Generate Roblox assets using AI</p>
+            <h1 className="text-4xl font-bold text-primary">RobloxGen AI</h1>
+            <p className="text-secondary text-lg">Generate Roblox assets using AI</p>
           </div>
           <div className="space-y-6">
             <div className="space-y-4">
-              <p className="text-gray-400">Choose how to sign in</p>
+              <p className="text-secondary">Choose how to sign in</p>
               <button
                 onClick={() => signIn('google')}
-                className="w-full bg-white hover:bg-gray-100 text-gray-900 font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-3"
+                className="w-full bg-primary hover:opacity-90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-3"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -554,34 +554,34 @@ export default function Home() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-600" />
+                <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-gray-400">or</span>
+                <span className="px-2 bg-background text-secondary">or</span>
               </div>
             </div>
 
             <form onSubmit={handleCustomSignIn} className="space-y-4">
-              <p className="text-gray-400">Create a custom account</p>
+              <p className="text-secondary">Create a custom account</p>
               <div className="space-y-3">
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Choose a username..."
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-input border border-border rounded-lg px-4 py-3 text-foreground placeholder-secondary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   autoFocus
                 />
                 <button
                   type="submit"
                   disabled={!username.trim()}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-3"
+                  className="w-full bg-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-3"
                 >
                   <LogIn className="w-5 h-5" />
                   Create Account
                 </button>
               </div>
-              <p className="text-xs text-gray-500">No password needed - just pick a username!</p>
+              <p className="text-xs text-secondary">No password needed - just pick a username!</p>
             </form>
           </div>
         </div>
@@ -649,7 +649,7 @@ export default function Home() {
                    </div>
                  </div>
                  {currentThreadId === thread.id && (
-                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse ml-2"></div>
+                   <div className="w-2 h-2 bg-primary rounded-full animate-pulse ml-2"></div>
                  )}
                </div>
              </div>
@@ -905,8 +905,8 @@ export default function Home() {
                 <div className="max-w-2xl p-4 rounded-xl bg-card border border-border">
                  <div className="flex items-center gap-3 mb-3">
                    <div className="relative">
-                     <Brain className="w-5 h-5 text-purple-400 animate-pulse" />
-                      <div className="absolute inset-0 w-5 h-5 border-2 border-purple-400 rounded-full animate-ping" style={{opacity: 0.2}}></div>
+                     <Brain className="w-5 h-5 text-primary animate-pulse" />
+                      <div className="absolute inset-0 w-5 h-5 border-2 border-primary rounded-full animate-ping" style={{opacity: 0.2}}></div>
                    </div>
                    <div>
                       <div className="text-foreground text-sm font-medium">AI is thinking...</div>
@@ -915,11 +915,11 @@ export default function Home() {
                  </div>
                        <div className="flex items-center gap-2 text-xs text-secondary">
                    <div className="flex gap-1">
-                     <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                     <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                     <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                     <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '450ms'}}></div>
-                     <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '600ms'}}></div>
+                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '450ms'}}></div>
+                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '600ms'}}></div>
                    </div>
                    <span>Understanding context • Researching patterns • Designing architecture • Optimizing performance</span>
                  </div>
@@ -950,7 +950,7 @@ export default function Home() {
                  )}
                      <div className="mb-3 p-3 bg-primary border border-primary rounded-lg" style={{opacity: 0.1}}>
                    <div className="flex items-center gap-2 mb-2">
-                     <Brain className="w-4 h-4 text-purple-400 animate-pulse" />
+                     <Brain className="w-4 h-4 text-primary animate-pulse" />
                       <span className="text-xs font-bold text-primary uppercase">AI Reasoning</span>
                    </div>
                     <p className="text-sm text-primary leading-relaxed">
@@ -960,16 +960,16 @@ export default function Home() {
                  <div className="space-y-2">
                    <div className="flex items-center gap-2">
                      <div className="relative">
-                       <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                       <div className="absolute inset-0 w-4 h-4 border-2 border-purple-400 rounded-full animate-ping opacity-30"></div>
+                       <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                       <div className="absolute inset-0 w-4 h-4 border-2 border-primary rounded-full animate-ping opacity-30"></div>
                      </div>
                       <span className="text-secondary text-sm">Generating with {currentModel?.name}...</span>
                    </div>
                     <div className="flex items-center gap-2 text-xs text-secondary">
                      <div className="flex gap-1">
-                       <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                       <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                       <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                       <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                       <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                       <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
                      </div>
                      <span>Analyzing requirements • Optimizing code • Creating assets</span>
                    </div>
@@ -1007,7 +1007,7 @@ export default function Home() {
                 {msg.reasoning && (
         <div className="mb-3 p-3 bg-primary border border-primary rounded-lg opacity-10">
                     <div className="flex items-center gap-2 mb-2">
-                      <Brain className="w-4 h-4 text-purple-400" />
+                      <Brain className="w-4 h-4 text-primary" />
                        <span className="text-xs font-bold text-primary uppercase">Reasoning</span>
                     </div>
                     <p className="text-sm text-primary leading-relaxed">{msg.reasoning}</p>
@@ -1021,7 +1021,7 @@ export default function Home() {
                      <div className="mt-3 pt-3 border-t border-border space-y-1">
                     <div className="flex items-center justify-between text-xs">
                        <span className="text-secondary">Model:</span>
-                      <span className="text-purple-400 font-medium">{msg.model}</span>
+                      <span className="text-primary font-medium">{msg.model}</span>
                     </div>
                      {msg.tokensUsed && msg.tokensUsed > 0 && (
                       <>
@@ -1032,7 +1032,7 @@ export default function Home() {
                          {msg.tokensPerSecond && msg.tokensPerSecond > 0 && (
                           <div className="flex items-center justify-between text-xs">
                              <span className="text-secondary">Speed:</span>
-                            <span className="text-purple-400 font-medium">{msg.tokensPerSecond.toFixed(1)} tokens/s</span>
+                            <span className="text-primary font-medium">{msg.tokensPerSecond.toFixed(1)} tokens/s</span>
                           </div>
                         )}
                         {msg.duration && (
@@ -1068,8 +1068,8 @@ export default function Home() {
                    <div className="bg-card border border-border p-4 rounded-xl">
                       <div className="flex items-center gap-3 mb-2">
                           <div className="relative">
-                              <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
-                               <div className="absolute inset-0 w-5 h-5 border-2 border-purple-400 rounded-full animate-ping" style={{opacity: 0.2}}></div>
+                              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                               <div className="absolute inset-0 w-5 h-5 border-2 border-primary rounded-full animate-ping" style={{opacity: 0.2}}></div>
                           </div>
                           <div>
                                <div className="text-foreground text-sm font-medium">Generating with {currentModel?.name}</div>
@@ -1078,10 +1078,10 @@ export default function Home() {
                       </div>
                   <div className="flex items-center gap-2 text-xs text-secondary">
                           <div className="flex gap-1">
-                              <div className="w-1 h-1 bg-purple-400 rounded-full animate-pulse" style={{animationDelay: '0ms'}}></div>
-                              <div className="w-1 h-1 bg-purple-400 rounded-full animate-pulse" style={{animationDelay: '200ms'}}></div>
-                              <div className="w-1 h-1 bg-purple-400 rounded-full animate-pulse" style={{animationDelay: '400ms'}}></div>
-                              <div className="w-1 h-1 bg-purple-400 rounded-full animate-pulse" style={{animationDelay: '600ms'}}></div>
+                              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" style={{animationDelay: '0ms'}}></div>
+                              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" style={{animationDelay: '200ms'}}></div>
+                              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" style={{animationDelay: '400ms'}}></div>
+                              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" style={{animationDelay: '600ms'}}></div>
                           </div>
                           <span>Connecting to AI • Loading model • Preparing workspace</span>
                       </div>
