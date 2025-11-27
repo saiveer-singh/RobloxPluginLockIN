@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 
 let apiKeys: any = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
@@ -7,19 +5,8 @@ let apiKeys: any = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
 };
 
-try {
-  // Only try reading file if keys are missing and we are in a Node environment
-  if (!apiKeys.OPENAI_API_KEY && typeof process !== 'undefined' && process.versions && process.versions.node) {
-      const keysPath = path.join(process.cwd(), 'api-keys.json');
-      if (fs.existsSync(keysPath)) {
-        const file = fs.readFileSync(keysPath, 'utf8');
-        const fileKeys = JSON.parse(file);
-        apiKeys = { ...apiKeys, ...fileKeys };
-      }
-  }
-} catch (e) {
-  // Ignore file read errors
-}
+// Removed fs/path based key loading to prevent build issues in edge/client contexts.
+// Please use environment variables.
 
 const BASE_SCHEMA = `
 CRITICAL: Output MUST be strict JSON matching this exact schema (no markdown, no code blocks, pure JSON only):
@@ -338,7 +325,7 @@ CRITICAL: Always create complete, well-structured models with proper hierarchy a
 `;
 
 // Enhanced request type detection with context awareness and scoring
-function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animation' | 'modeling' {
+export function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animation' | 'modeling' {
   const lowerPrompt = prompt.toLowerCase();
   
   // Enhanced keyword sets with weights and context
@@ -544,7 +531,7 @@ export interface ModelConfig {
   displayName: string;
 }
 
-const MODEL_CONFIGS: Record<ModelProvider, ModelConfig> = {
+export const MODEL_CONFIGS: Record<ModelProvider, ModelConfig> = {
   'x-ai-grok-4.1-fast-free': {
     provider: 'openrouter',
     modelId: 'x-ai/grok-4.1-fast:free',

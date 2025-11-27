@@ -52,12 +52,12 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: any, user: any }) {
       if (user) {
         // Generate a fake Roblox ID based on Google ID or email
         const identifier = user.id || user.email || 'default';
         const fakeRobloxId = Math.abs(
-          identifier.split('').reduce((acc, char) => {
+          identifier.split('').reduce((acc: number, char: string) => {
             return ((acc << 5) - acc) + char.charCodeAt(0)
           }, 0)
         ).toString();
@@ -65,7 +65,7 @@ export const authOptions = {
       }
       return token
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: any, token: any }) {
       if (session.user) {
         (session.user as any).robloxId = token.robloxId as string
       }
