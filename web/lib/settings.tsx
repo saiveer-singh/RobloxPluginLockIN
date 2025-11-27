@@ -194,6 +194,7 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     primary: '#bd93f9',
     primaryForeground: '#282a36',
     secondary: '#9CA3AF',
+    secondary: '#44475a',
     accent: '#ff79c6',
     border: '#44475a',
     card: '#282a36',
@@ -209,6 +210,7 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     primary: '#88c0d0',
     primaryForeground: '#2e3440',
     secondary: '#d8dee9',
+    secondary: '#4c566a',
     accent: '#81a1c1',
     border: '#4c566a',
     card: '#3b4252',
@@ -270,6 +272,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(themeColors).forEach(([key, value]) => {
       // Set the underlying CSS variable that the theme maps to
       root.style.setProperty(`--val-${key}`, value);
+      if (key === 'primary') {
+         // Also set primary-foreground if not present (simple logic for now)
+         root.style.setProperty('--val-primary-foreground', '#ffffff');
+      }
     });
 
     // Handle missing primaryForeground for custom themes that might not have it yet
