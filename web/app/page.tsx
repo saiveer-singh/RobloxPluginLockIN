@@ -8,6 +8,7 @@ import { LogIn, LogOut, Search, Menu, Plus, MessageSquare, Settings, User, Copy,
 import { PreviewModal } from '@/components/PreviewModal';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ModelIcon } from '@/components/ModelIcon';
+import { ModernBackground } from '@/components/ModernBackground';
 
 // Extend NextAuth types
 declare module "next-auth" {
@@ -529,18 +530,19 @@ export default function Home() {
     };
 
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-        <div className="text-center space-y-8 max-w-md mx-auto p-8">
+      <div className="flex h-screen items-center justify-center bg-background text-foreground relative overflow-hidden">
+        {settings.animations && <ModernBackground />}
+        <div className="text-center space-y-8 max-w-md mx-auto p-8 relative z-10 bg-card/80 backdrop-blur-md rounded-2xl border border-border shadow-2xl">
           <div className="space-y-4">
-            <h1 className="text-4xl font-bold text-white">RobloxGen AI</h1>
-            <p className="text-gray-300 text-lg">Generate Roblox assets using AI</p>
+            <h1 className="text-4xl font-bold text-primary">RobloxGen AI</h1>
+            <p className="text-secondary text-lg">Generate Roblox assets using AI</p>
           </div>
           <div className="space-y-6">
             <div className="space-y-4">
-              <p className="text-gray-400">Choose how to sign in</p>
+              <p className="text-secondary">Choose how to sign in</p>
               <button
                 onClick={() => signIn('google')}
-                className="w-full bg-white hover:bg-gray-100 text-gray-900 font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-3"
+                className="w-full bg-primary hover:opacity-90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-3 shadow-lg hover:shadow-primary/20"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -554,34 +556,34 @@ export default function Home() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-600" />
+                <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-gray-400">or</span>
+                <span className="px-2 bg-card text-secondary">or</span>
               </div>
             </div>
 
             <form onSubmit={handleCustomSignIn} className="space-y-4">
-              <p className="text-gray-400">Create a custom account</p>
+              <p className="text-secondary">Create a custom account</p>
               <div className="space-y-3">
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Choose a username..."
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-input border border-border rounded-lg px-4 py-3 text-foreground placeholder-secondary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   autoFocus
                 />
                 <button
                   type="submit"
                   disabled={!username.trim()}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-3"
+                  className="w-full bg-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-3 shadow-lg hover:shadow-primary/20"
                 >
                   <LogIn className="w-5 h-5" />
                   Create Account
                 </button>
               </div>
-              <p className="text-xs text-gray-500">No password needed - just pick a username!</p>
+              <p className="text-xs text-secondary">No password needed - just pick a username!</p>
             </form>
           </div>
         </div>
@@ -590,9 +592,12 @@ export default function Home() {
   }
 
    return (
-    <div className={`flex h-screen ${settings.compactMode ? 'compact-mode' : ''}`}>
+    <div className={`flex h-screen ${settings.compactMode ? 'compact-mode' : ''} relative`}>
+      {/* Background Component - Rendered behind everything */}
+      {settings.animations && messages.length === 0 && <ModernBackground />}
+
       {/* Sidebar */}
-      <div className={`w-64 border-r border-border p-4 hidden md:flex flex-col gap-4 sidebar-spacing`}>
+      <div className={`w-64 border-r border-border p-4 hidden md:flex flex-col gap-4 sidebar-spacing bg-background/80 backdrop-blur-sm z-10`}>
         <div className="flex items-center gap-3 font-bold text-xl text-foreground">
           <Menu className="w-5 h-5 cursor-pointer hover:text-secondary transition-colors" />
           <span>RobloxGen AI</span>
@@ -601,7 +606,7 @@ export default function Home() {
         {/* New Chat Button */}
         <button 
           onClick={createNewThread}
-          className="w-full bg-primary hover:opacity-80 text-foreground font-medium py-2.5 px-4 rounded-lg transition-colors"
+          className="w-full bg-primary hover:opacity-80 text-foreground font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm"
         >
           New Chat
         </button>
@@ -630,7 +635,7 @@ export default function Home() {
                  setSearchQuery('');
                }}
                 className={`text-secondary text-sm p-3 hover:bg-hover rounded-lg cursor-pointer transition-all ${
-                   currentThreadId === thread.id ? 'bg-primary text-foreground border border-primary' : 'hover:bg-hover'
+                   currentThreadId === thread.id ? 'bg-primary text-foreground border border-primary shadow-sm' : 'hover:bg-hover'
                 }`}
              >
                <div className="flex items-start justify-between">
@@ -649,7 +654,7 @@ export default function Home() {
                    </div>
                  </div>
                  {currentThreadId === thread.id && (
-                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse ml-2"></div>
+                   <div className="w-2 h-2 bg-primary rounded-full animate-pulse ml-2"></div>
                  )}
                </div>
              </div>
@@ -665,7 +670,7 @@ export default function Home() {
         </div>
          <div className="border-t border-border pt-4 space-y-3">
            <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold shadow-sm">
                U
              </div>
              <div className="flex-1 min-w-0">
@@ -714,13 +719,13 @@ export default function Home() {
       </div>
 
       {/* Main Chat */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col z-10 relative">
           {/* Top Bar */}
-          <div className="flex items-center justify-end gap-3 p-4 border-b border-border">
+          <div className="flex items-center justify-end gap-3 p-4 border-b border-border bg-background/50 backdrop-blur-sm">
             <button
               onClick={() => setShowSystemPrompt(!showSystemPrompt)}
                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
-                  showSystemPrompt ? 'bg-primary text-foreground' : 'text-secondary hover:text-foreground hover:bg-hover'}`}
+                  showSystemPrompt ? 'bg-primary text-foreground shadow-sm' : 'text-secondary hover:text-foreground hover:bg-hover'}`}
            >
              <MessageSquare className="w-4 h-4" />
              <span className="text-sm">System Prompt</span>
@@ -764,90 +769,17 @@ export default function Home() {
         <div className={`flex-1 overflow-y-auto p-4 space-y-4 message-spacing`} ref={scrollRef}>
            {messages.length === 0 && (
              <div className="h-full flex flex-col items-center justify-center gap-8 max-w-3xl mx-auto relative">
-                  {/* Animated background elements - Confetti and Fireworks */}
-                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    {/* Confetti pieces */}
-                    {Array.from({ length: 20 }, (_, i) => {
-                      const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7', '#a29bfe'];
-                      const left = Math.random() * 100;
-                      const delay = Math.random() * 10;
-                      const duration = 8 + Math.random() * 4;
-                      const size = 4 + Math.random() * 8;
-                      return (
-                        <div
-                          key={`confetti-${i}`}
-                          className="absolute animate-confetti-fall"
-                          style={{
-                            left: `${left}%`,
-                            top: '-10px',
-                            width: `${size}px`,
-                            height: `${size}px`,
-                            backgroundColor: colors[i % colors.length],
-                            borderRadius: Math.random() > 0.5 ? '50%' : '2px',
-                            animationDelay: `${delay}s`,
-                            animationDuration: `${duration}s`,
-                            opacity: 0.7,
-                          }}
-                        />
-                      );
-                    })}
-
-                    {/* Fireworks bursts */}
-                    {Array.from({ length: 5 }, (_, i) => {
-                      const left = 20 + Math.random() * 60;
-                      const top = 20 + Math.random() * 60;
-                      const delay = 2 + Math.random() * 8;
-                      const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b'];
-                      return (
-                        <div
-                          key={`firework-${i}`}
-                          className="absolute"
-                          style={{
-                            left: `${left}%`,
-                            top: `${top}%`,
-                            animationDelay: `${delay}s`,
-                          }}
-                        >
-                          {/* Firework center */}
-                          <div
-                            className="absolute w-2 h-2 rounded-full animate-firework-burst"
-                            style={{
-                              backgroundColor: colors[i % colors.length],
-                              animationDuration: '1.5s',
-                            }}
-                          />
-                          {/* Firework particles */}
-                          {Array.from({ length: 8 }, (_, j) => {
-                            const angle = (j * 45) * (Math.PI / 180);
-                            const distance = 30 + Math.random() * 20;
-                            const tx = Math.cos(angle) * distance;
-                            const ty = Math.sin(angle) * distance;
-                            return (
-                              <div
-                                key={`particle-${i}-${j}`}
-                                className="absolute w-1 h-1 rounded-full animate-firework-particle"
-                                style={{
-                                  backgroundColor: colors[i % colors.length],
-                                  '--tx': `${tx}px`,
-                                  '--ty': `${ty}px`,
-                                  animationDelay: '0.3s',
-                                  animationDuration: '1.2s',
-                                } as React.CSSProperties}
-                              />
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                 <div className="text-center space-y-4">
-                   <h1 className="text-4xl font-bold text-white">What would you like to create in Roblox?</h1>
-                    <p className="text-secondary text-lg">Describe your idea and watch AI bring it to life</p>
+                 <div className="text-center space-y-4 animate-fade-in">
+                   <h1 className="text-4xl md:text-5xl font-bold text-foreground drop-shadow-sm">
+                     What would you like to create?
+                   </h1>
+                    <p className="text-secondary text-lg max-w-xl mx-auto">
+                      Describe your idea and watch AI bring it to life in Roblox
+                    </p>
                  </div>
                 
                 {/* Action Buttons - Roblox Asset Types */}
-                <div className="flex gap-3 flex-wrap justify-center">
+                <div className="flex gap-3 flex-wrap justify-center animate-fade-in" style={{animationDelay: '0.1s'}}>
                   {[
                     { icon: Code2, label: 'Scripting', prompt: 'Create a script for' },
                     { icon: SparklesIcon, label: 'VFX', prompt: 'Create a VFX effect for' },
@@ -857,21 +789,21 @@ export default function Home() {
                     <button
                       key={label}
                       onClick={() => setInput(prompt + ' ')}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border rounded-lg text-foreground hover:border-primary transition-colors"
+                      className="flex items-center gap-2 px-5 py-3 bg-card/80 backdrop-blur-sm border border-border rounded-xl text-foreground hover:border-primary hover:shadow-lg hover:shadow-primary/10 transition-all transform hover:-translate-y-1"
                     >
-                      <Icon className="w-4 h-4" />
-                      <span>{label}</span>
+                      <Icon className="w-5 h-5 text-primary" />
+                      <span className="font-medium">{label}</span>
                     </button>
                   ))}
                 </div>
 
                  {/* Smart Suggestions - Context Aware */}
-                 <div className="space-y-3 w-full">
+                 <div className="space-y-3 w-full animate-fade-in" style={{animationDelay: '0.2s'}}>
                     <div className="flex items-center gap-2 text-sm text-secondary font-medium">
-                     <Lightbulb className="w-4 h-4" />
+                     <Lightbulb className="w-4 h-4 text-accent" />
                      Smart Suggestions
                    </div>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                      {[
                        { text: "Create a futuristic shop UI with blur effects", icon: ShoppingCart, category: "UI" },
                        { text: "Make a red laser beam VFX", icon: ZapIcon, category: "VFX" },
@@ -885,12 +817,14 @@ export default function Home() {
                        <button
                          key={suggestion.text}
                          onClick={() => setInput(suggestion.text)}
-                           className="flex items-center gap-2 text-left text-secondary hover:text-foreground p-3 rounded-lg hover:bg-hover border border-border hover:border-primary transition-all group"
+                           className="flex items-center gap-3 text-left text-secondary hover:text-foreground p-3 rounded-xl hover:bg-card border border-transparent hover:border-border transition-all group hover:shadow-sm"
                        >
-                          <suggestion.icon className="w-4 h-4 text-secondary group-hover:text-primary" />
-                         <div className="flex-1">
-                           <div className="text-sm">{suggestion.text}</div>
-                             <div className="text-xs text-secondary group-hover:text-foreground" style={{opacity: 0.7}}>{suggestion.category}</div>
+                          <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center group-hover:border-primary/50 transition-colors">
+                            <suggestion.icon className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                          </div>
+                         <div className="flex-1 min-w-0">
+                           <div className="text-sm truncate font-medium">{suggestion.text}</div>
+                             <div className="text-xs text-secondary group-hover:text-foreground transition-colors" style={{opacity: 0.7}}>{suggestion.category}</div>
                          </div>
                        </button>
                      ))}
@@ -902,11 +836,11 @@ export default function Home() {
             {/* AI Thinking Indicator */}
             {loading && !streamingReasoning && (
               <div className="flex justify-start">
-                <div className="max-w-2xl p-4 rounded-xl bg-card border border-border">
+                <div className="max-w-2xl p-4 rounded-xl bg-card border border-border shadow-sm">
                  <div className="flex items-center gap-3 mb-3">
                    <div className="relative">
-                     <Brain className="w-5 h-5 text-purple-400 animate-pulse" />
-                      <div className="absolute inset-0 w-5 h-5 border-2 border-purple-400 rounded-full animate-ping" style={{opacity: 0.2}}></div>
+                     <Brain className="w-5 h-5 text-primary animate-pulse" />
+                      <div className="absolute inset-0 w-5 h-5 border-2 border-primary rounded-full animate-ping" style={{opacity: 0.2}}></div>
                    </div>
                    <div>
                       <div className="text-foreground text-sm font-medium">AI is thinking...</div>
@@ -915,11 +849,11 @@ export default function Home() {
                  </div>
                        <div className="flex items-center gap-2 text-xs text-secondary">
                    <div className="flex gap-1">
-                     <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                     <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                     <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                     <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '450ms'}}></div>
-                     <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '600ms'}}></div>
+                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '450ms'}}></div>
+                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '600ms'}}></div>
                    </div>
                    <span>Understanding context • Researching patterns • Designing architecture • Optimizing performance</span>
                  </div>
@@ -930,46 +864,45 @@ export default function Home() {
             {/* Streaming Reasoning Display */}
             {loading && streamingReasoning && (
               <div className="flex justify-start">
-                <div className="max-w-2xl p-4 rounded-xl bg-card border border-border">
+                <div className="max-w-2xl p-4 rounded-xl bg-card border border-border shadow-sm">
                  {streamingRequestType && (
                    <div className="mb-2">
                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                       streamingRequestType === 'scripting' ? 'bg-blue-500 text-blue-400 border border-blue-800' :
-                       streamingRequestType === 'vfx' ? 'bg-purple-500 text-purple-400 border border-purple-800' :
-                       streamingRequestType === 'animation' ? 'bg-pink-500 text-pink-400 border border-pink-800' :
-                       'bg-orange-500 text-orange-400 border border-orange-800'
+                       streamingRequestType === 'scripting' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
+                       streamingRequestType === 'vfx' ? 'bg-purple-500/10 text-purple-500 border border-purple-500/20' :
+                       streamingRequestType === 'animation' ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' :
+                       'bg-orange-500/10 text-orange-500 border border-orange-500/20'
                      }`}>
-                       {streamingRequestType === 'scripting' && <Code2 className="w-3 h-3" />}
-                       {streamingRequestType === 'vfx' && <SparklesIcon className="w-3 h-3" />}
-                       {streamingRequestType === 'animation' && <Film className="w-3 h-3" />}
-                       {streamingRequestType === 'modeling' && <Boxes className="w-3 h-3" />}
-                       {' '}
+                       {streamingRequestType === 'scripting' && <Code2 className="w-3 h-3 mr-1" />}
+                       {streamingRequestType === 'vfx' && <SparklesIcon className="w-3 h-3 mr-1" />}
+                       {streamingRequestType === 'animation' && <Film className="w-3 h-3 mr-1" />}
+                       {streamingRequestType === 'modeling' && <Boxes className="w-3 h-3 mr-1" />}
                        {streamingRequestType.charAt(0).toUpperCase() + streamingRequestType.slice(1)} Mode
                      </span>
                    </div>
                  )}
-                     <div className="mb-3 p-3 bg-primary border border-primary rounded-lg" style={{opacity: 0.1}}>
+                     <div className="mb-3 p-3 bg-primary/5 border border-primary/10 rounded-lg">
                    <div className="flex items-center gap-2 mb-2">
-                     <Brain className="w-4 h-4 text-purple-400 animate-pulse" />
+                     <Brain className="w-4 h-4 text-primary animate-pulse" />
                       <span className="text-xs font-bold text-primary uppercase">AI Reasoning</span>
                    </div>
-                    <p className="text-sm text-primary leading-relaxed">
+                    <p className="text-sm text-foreground/80 leading-relaxed font-mono text-xs">
                      <TypingText text={streamingReasoning} speed={15} />
                    </p>
                  </div>
                  <div className="space-y-2">
                    <div className="flex items-center gap-2">
                      <div className="relative">
-                       <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                       <div className="absolute inset-0 w-4 h-4 border-2 border-purple-400 rounded-full animate-ping opacity-30"></div>
+                       <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                       <div className="absolute inset-0 w-4 h-4 border-2 border-primary rounded-full animate-ping opacity-30"></div>
                      </div>
                       <span className="text-secondary text-sm">Generating with {currentModel?.name}...</span>
                    </div>
                     <div className="flex items-center gap-2 text-xs text-secondary">
                      <div className="flex gap-1">
-                       <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                       <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                       <div className="w-1 h-1 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                       <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                       <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                       <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
                      </div>
                      <span>Analyzing requirements • Optimizing code • Creating assets</span>
                    </div>
@@ -980,24 +913,23 @@ export default function Home() {
           
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-               <div className={`max-w-2xl p-4 rounded-xl animate-fade-in ${
+               <div className={`max-w-2xl p-4 rounded-xl animate-fade-in shadow-sm ${
                   msg.role === 'user' ? 'bg-primary text-foreground' :
-                  msg.role === 'error' ? 'bg-error border border-error text-error' : 'bg-card border border-border'
+                  msg.role === 'error' ? 'bg-error/10 border border-error/20 text-error' : 'bg-card border border-border'
                }`}>
                 {/* Request Type Badge */}
                 {msg.requestType && (
                   <div className="mb-2">
                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                       msg.requestType === 'scripting' ? 'bg-blue-500 text-blue-400 border border-blue-800' :
-                       msg.requestType === 'vfx' ? 'bg-purple-500 text-purple-400 border border-purple-800' :
-                       msg.requestType === 'animation' ? 'bg-pink-500 text-pink-400 border border-pink-800' :
-                       'bg-orange-500 text-orange-400 border border-orange-800'
+                       msg.requestType === 'scripting' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
+                       msg.requestType === 'vfx' ? 'bg-purple-500/10 text-purple-500 border border-purple-500/20' :
+                       msg.requestType === 'animation' ? 'bg-pink-500/10 text-pink-500 border border-pink-500/20' :
+                       'bg-orange-500/10 text-orange-500 border border-orange-500/20'
                       }`}>
-                       {msg.requestType === 'scripting' && <Code2 className="w-3 h-3" />}
-                       {msg.requestType === 'vfx' && <SparklesIcon className="w-3 h-3" />}
-                       {msg.requestType === 'animation' && <Film className="w-3 h-3" />}
-                       {msg.requestType === 'modeling' && <Boxes className="w-3 h-3" />}
-                       {' '}
+                       {msg.requestType === 'scripting' && <Code2 className="w-3 h-3 mr-1" />}
+                       {msg.requestType === 'vfx' && <SparklesIcon className="w-3 h-3 mr-1" />}
+                       {msg.requestType === 'animation' && <Film className="w-3 h-3 mr-1" />}
+                       {msg.requestType === 'modeling' && <Boxes className="w-3 h-3 mr-1" />}
                        {msg.requestType.charAt(0).toUpperCase() + msg.requestType.slice(1)} Mode
                      </span>
                   </div>
@@ -1005,23 +937,23 @@ export default function Home() {
                 
                 {/* Reasoning Display */}
                 {msg.reasoning && (
-        <div className="mb-3 p-3 bg-primary border border-primary rounded-lg opacity-10">
+                  <div className="mb-3 p-3 bg-primary/5 border border-primary/10 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <Brain className="w-4 h-4 text-purple-400" />
+                      <Brain className="w-4 h-4 text-primary" />
                        <span className="text-xs font-bold text-primary uppercase">Reasoning</span>
                     </div>
-                    <p className="text-sm text-primary leading-relaxed">{msg.reasoning}</p>
+                    <p className="text-xs text-foreground/80 leading-relaxed font-mono">{msg.reasoning}</p>
                   </div>
                 )}
                 
-                <div className="mb-2">{msg.content}</div>
+                <div className="mb-2 whitespace-pre-wrap">{msg.content}</div>
                 
                 {/* Model and Token Info */}
                 {msg.model && (
-                     <div className="mt-3 pt-3 border-t border-border space-y-1">
+                     <div className="mt-3 pt-3 border-t border-border/50 space-y-1">
                     <div className="flex items-center justify-between text-xs">
                        <span className="text-secondary">Model:</span>
-                      <span className="text-purple-400 font-medium">{msg.model}</span>
+                      <span className="text-primary font-medium">{msg.model}</span>
                     </div>
                      {msg.tokensUsed && msg.tokensUsed > 0 && (
                       <>
@@ -1032,7 +964,7 @@ export default function Home() {
                          {msg.tokensPerSecond && msg.tokensPerSecond > 0 && (
                           <div className="flex items-center justify-between text-xs">
                              <span className="text-secondary">Speed:</span>
-                            <span className="text-purple-400 font-medium">{msg.tokensPerSecond.toFixed(1)} tokens/s</span>
+                            <span className="text-primary font-medium">{msg.tokensPerSecond.toFixed(1)} tokens/s</span>
                           </div>
                         )}
                         {msg.duration && (
@@ -1050,12 +982,12 @@ export default function Home() {
                   <div className="flex gap-2 mt-2">
                     <button 
                         onClick={() => setPreviewData(msg.data)}
-                        className="flex items-center gap-2 px-3 py-1 bg-secondary hover:bg-secondary rounded text-xs border border-border"
+                        className="flex items-center gap-2 px-3 py-1 bg-secondary/10 hover:bg-secondary/20 rounded text-xs border border-border transition-colors"
                     >
                         <Code className="w-3 h-3" /> View Data
                     </button>
-                      <div className="flex items-center gap-2 px-3 py-1 bg-success text-success rounded text-xs border border-success">
-                         sent to plugin
+                      <div className="flex items-center gap-2 px-3 py-1 bg-success/10 text-success rounded text-xs border border-success/20">
+                         <Check className="w-3 h-3" /> sent to plugin
                      </div>
                   </div>
                 )}
@@ -1065,11 +997,11 @@ export default function Home() {
           
             {loading && !streamingReasoning && (
                <div className="flex justify-start">
-                   <div className="bg-card border border-border p-4 rounded-xl">
+                   <div className="bg-card border border-border p-4 rounded-xl shadow-sm">
                       <div className="flex items-center gap-3 mb-2">
                           <div className="relative">
-                              <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
-                               <div className="absolute inset-0 w-5 h-5 border-2 border-purple-400 rounded-full animate-ping" style={{opacity: 0.2}}></div>
+                              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                               <div className="absolute inset-0 w-5 h-5 border-2 border-primary rounded-full animate-ping" style={{opacity: 0.2}}></div>
                           </div>
                           <div>
                                <div className="text-foreground text-sm font-medium">Generating with {currentModel?.name}</div>
@@ -1078,10 +1010,10 @@ export default function Home() {
                       </div>
                   <div className="flex items-center gap-2 text-xs text-secondary">
                           <div className="flex gap-1">
-                              <div className="w-1 h-1 bg-purple-400 rounded-full animate-pulse" style={{animationDelay: '0ms'}}></div>
-                              <div className="w-1 h-1 bg-purple-400 rounded-full animate-pulse" style={{animationDelay: '200ms'}}></div>
-                              <div className="w-1 h-1 bg-purple-400 rounded-full animate-pulse" style={{animationDelay: '400ms'}}></div>
-                              <div className="w-1 h-1 bg-purple-400 rounded-full animate-pulse" style={{animationDelay: '600ms'}}></div>
+                              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" style={{animationDelay: '0ms'}}></div>
+                              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" style={{animationDelay: '200ms'}}></div>
+                              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" style={{animationDelay: '400ms'}}></div>
+                              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" style={{animationDelay: '600ms'}}></div>
                           </div>
                           <span>Connecting to AI • Loading model • Preparing workspace</span>
                       </div>
@@ -1091,9 +1023,9 @@ export default function Home() {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 bg-card border-t border-border">
+        <div className="p-4 bg-card/80 backdrop-blur-sm border-t border-border">
           <div className="max-w-4xl mx-auto">
-             <div className="relative flex items-center bg-input border border-border rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+             <div className="relative flex items-center bg-input border border-border rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary shadow-sm transition-all">
               {/* Model selector - Always visible */}
               <div className="relative" ref={dropdownRef}>
                   <button
@@ -1171,7 +1103,7 @@ export default function Home() {
                 <button 
                     onClick={sendMessage}
                     disabled={loading || !input.trim()}
-                     className="px-3 h-8 bg-primary hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg flex items-center justify-center transition-colors"
+                     className="px-3 h-8 bg-primary hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg flex items-center justify-center transition-colors shadow-sm"
                 >
                     <Send className="w-4 h-4" />
                 </button>
