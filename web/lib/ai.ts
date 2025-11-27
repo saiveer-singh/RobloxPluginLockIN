@@ -575,3 +575,111 @@ export interface GenerationResult {
   duration: number;
   requestType: string;
 }
+
+export async function generateContent(
+  prompt: string,
+  modelKey: ModelProvider = 'x-ai-grok-4.1-fast-free'
+): Promise<GenerationResult> {
+  const requestType = detectRequestType(prompt);
+  let systemPrompt = '';
+
+  switch (requestType) {
+    case 'scripting':
+      systemPrompt = SCRIPTING_PROMPT;
+      break;
+    case 'vfx':
+      systemPrompt = VFX_PROMPT;
+      break;
+    case 'animation':
+      systemPrompt = ANIMATION_PROMPT;
+      break;
+    case 'modeling':
+      systemPrompt = MODELING_PROMPT;
+      break;
+  }
+
+  const modelConfig = MODEL_CONFIGS[modelKey];
+  if (!modelConfig) {
+    throw new Error(`Model configuration not found for key: ${modelKey}`);
+  }
+
+  const apiKey = process.env.OPENROUTER_API_KEY || apiKeys?.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error('OpenRouter API key is missing. Please check your .env.local or api-keys.json file.');
+  }
+
+  const startTime = Date.now();
+
+  try {
+    const body: any = {
+      model: modelConfig.modelId,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 4000
+    };
+
+    // Only add response_format for models that definitely support it or if we want to try enforcing it.
+    // Most newer models on OpenRouter support it, but just in case, we can make it conditional or keep it.
+    // For now, I'll keep it but be aware.
+    // Grok 4.1 might support it.
+    body.response_format = { type: 'json_object' };
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://roblox-ai-plugin.com', // Replace with your actual site URL
+        'X-Title': 'Roblox AI Plugin',
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenRouter API error: ${response.statusText} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const duration = (Date.now() - startTime) / 1000;
+
+    if (!data.choices || data.choices.length === 0 || !data.choices[0].message.content) {
+      throw new Error('Invalid response from OpenRouter API');
+    }
+
+    const contentString = data.choices[0].message.content;
+    let content;
+    try {
+      content = JSON.parse(contentString);
+    } catch (parseError) {
+      console.error('Failed to parse JSON content:', contentString);
+      throw new Error('Failed to parse JSON content from AI response');
+    }
+
+    // Basic validation of content structure
+    if (!content.message || !content.assets || !Array.isArray(content.assets)) {
+       // Try to salvage if wrapped in another object
+       if (content.response && content.response.message && content.response.assets) {
+         content = content.response;
+       } else {
+         console.warn('AI response structure might be incorrect:', content);
+       }
+    }
+
+    return {
+      content,
+      model: modelKey,
+      tokensUsed: data.usage?.total_tokens || 0,
+      tokensPerSecond: Math.round((data.usage?.completion_tokens || 0) / duration),
+      duration,
+      requestType
+    };
+
+  } catch (error) {
+    console.error('Error in generateContent:', error);
+    throw error;
+  }
+}
