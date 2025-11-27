@@ -1,90 +1,131 @@
 @import "tailwindcss";
 
 :root {
-  /* Roblox Dark Theme - Professional & Clean */
-  --color-background: #232527; /* Main dark background */
-  --color-foreground: #ffffff; /* Main text */
-
-  --color-primary: #00a2ff; /* Roblox Studio Blue */
-  --color-primary-foreground: #ffffff;
-
-  --color-secondary: #393b3d; /* Lighter background for headers/sidebars */
-  --color-secondary-foreground: #bdbebf;
-
-  --color-card: #2d2f31; /* Card background */
-  --color-card-foreground: #ffffff;
-
-  --color-border: #111111; /* Dark borders */
-  --color-input: #111111; /* Dark input fields */
-
-  --color-hover: #3e4042; /* Hover state */
-
-  --color-success: #02b757;
-  --color-error: #d04242;
-  --color-warning: #f68802;
+  /* Sunset theme variables */
+  --color-background: #1a0b2e;
+  --color-foreground: #ffffff;
+  --color-primary: #ff6b6b;
+  --color-secondary: #9ca3af;
+  --color-accent: #ffd93d;
+  --color-border: #4a0e4e;
+  --color-card: #0f0a1a;
+  --color-input: #0f0a1a;
+  --color-hover: #4a0e4e;
+  --color-success: #6bcf7f;
+  --color-error: #ff6b6b;
+  --color-warning: #ffd93d;
 
   /* Font and animation variables */
-  --font-size-base: 14px; /* Slightly smaller for density */
+  --font-size-base: 16px;
   --animation-duration: 0.2s;
 
-  --font-sans: "Segoe UI", Helvetica, Arial, sans-serif; /* Standard Windows/Roblox font */
-  --font-mono: "Consolas", monospace;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 @theme inline {
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
-
-  --color-background: var(--color-background);
-  --color-foreground: var(--color-foreground);
-  --color-primary: var(--color-primary);
-  --color-secondary: var(--color-secondary);
-  --color-card: var(--color-card);
-  --color-border: var(--color-border);
-  --color-hover: var(--color-hover);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background-color: var(--color-background);
+  background: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-sans);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   font-size: var(--font-size-base);
+  transition: background-color var(--animation-duration), color var(--animation-duration);
 }
 
-/* Custom scrollbar to match Roblox Studio */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-  background-color: var(--color-background);
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background-color: var(--color-background);
+  background: var(--color-card);
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #5e6062;
-  border-radius: 0;
-  border: 2px solid var(--color-background);
+  background: var(--color-border);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #787a7c;
+  background: var(--color-primary);
 }
 
-/* Utilities */
-.text-secondary {
-  color: var(--color-secondary-foreground);
+/* Animation classes */
+.animate-fade-in {
+  animation: fadeIn var(--animation-duration) ease-in-out;
 }
 
-.bg-card {
-  background-color: var(--color-card);
+.animate-confetti-fall {
+  animation: confettiFall linear infinite;
 }
 
-.border-border {
-  border-color: var(--color-border);
+.animate-firework-burst {
+  animation: fireworkBurst ease-out forwards;
 }
 
-.hover\:bg-hover:hover {
-  background-color: var(--color-hover);
+.animate-firework-particle {
+  animation: fireworkParticle ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Confetti falling animation */
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* Fireworks burst animation */
+@keyframes fireworkBurst {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Firework particle animation */
+@keyframes fireworkParticle {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx), var(--ty)) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Compact mode adjustments */
+.compact-mode .message-spacing {
+  margin-bottom: 0.5rem;
+}
+
+.compact-mode .sidebar-spacing {
+  padding: 0.5rem;
+}
+
+/* Theme transition for all elements */
+* {
+  transition: background-color var(--animation-duration), color var(--animation-duration), border-color var(--animation-duration);
 }
