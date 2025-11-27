@@ -1,0 +1,11 @@
+{
+  "name": "RobloxGenAIPlugin",
+  "tree": {
+    "$className": "DataModel",
+    "ServerStorage": {
+      "RobloxGenAI_Plugin": {
+        "$path": "src"
+      }
+    }
+  }
+}
