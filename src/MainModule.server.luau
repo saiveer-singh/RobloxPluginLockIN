@@ -117,7 +117,7 @@ local function loop()
         -- Only poll if enabled
         if widget.Enabled then
             Network.SendHeartbeat()
-            local data = Network.Poll()
+            local data, err = Network.Poll()
 
             if data then
                 updateStatus(true)
@@ -146,7 +146,11 @@ local function loop()
             else
                 -- If we get nil, it might be a connection error
                 updateStatus(false)
-                addLog("Connection failed - check token and server")
+                if err then
+                    addLog("Connection failed: " .. tostring(err))
+                else
+                    addLog("Connection failed - check token and server")
+                end
             end
         end
 		task.wait(2)

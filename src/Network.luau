@@ -21,9 +21,8 @@ function Network.Poll()
 		local data = HttpService:JSONDecode(response)
 		return data
 	else
-		-- Suppress warnings if just connection refused (server down) to avoid spam
-		-- warn("Poll failed: " .. tostring(response))
-		return nil
+		-- Return the error message so the UI can display it
+		return nil, response
 	end
 end
 
