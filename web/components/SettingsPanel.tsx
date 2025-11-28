@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Settings, X, Monitor, Zap, MessageSquare, Volume2, Eye, Save, RotateCcw, Cpu, Search, Check, ChevronDown, Palette } from 'lucide-react';
+import { Settings, X, Monitor, Zap, MessageSquare, RotateCcw, Cpu, Search, Check, ChevronDown, Palette } from 'lucide-react';
 import { useSettings, ThemePreset, themePresets, ThemeColors } from '@/lib/settings';
-import type { ModelProvider } from '@/lib/ai';
 import { ModelIcon } from './ModelIcon';
 import { ALL_MODELS, getCategories, type ModelInfo } from '@/lib/models';
 
@@ -326,7 +325,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                       </div>
                       <select
                         value={settings.fontSize}
-                        onChange={(e) => updateSettings({ fontSize: e.target.value as any })}
+                        onChange={(e) => updateSettings({ fontSize: e.target.value as 'small' | 'medium' | 'large' })}
                         className="px-3 py-1 bg-input border border-border rounded text-sm text-foreground"
                       >
                         <option value="small">Small</option>
@@ -447,7 +446,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                       </div>
                       <select
                         value={settings.typingSpeed}
-                        onChange={(e) => updateSettings({ typingSpeed: e.target.value as any })}
+                        onChange={(e) => updateSettings({ typingSpeed: e.target.value as 'slow' | 'normal' | 'fast' })}
                         className="px-3 py-1 bg-input border border-border rounded text-sm text-foreground"
                       >
                         <option value="slow">Slow</option>
@@ -636,7 +635,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   
                   {filteredModels.length === 0 && (
                     <div className="text-center py-8 text-secondary">
-                      No models found matching "{modelSearchQuery}"
+                      No models found matching &quot;{modelSearchQuery}&quot;
                     </div>
                   )}
                 </div>

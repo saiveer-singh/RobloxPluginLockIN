@@ -37,15 +37,15 @@ local function parseValue(instance, propName, value)
 		end
 		
 		-- Try to parse Color3.fromRGB() function call
-		local rgbCall = value:match("Color3%.fromRGB%((%d+),%s*(%d+),%s*(%d+)%)")
-		if rgbCall then
-			return Color3.fromRGB(tonumber(rgbCall), tonumber(rgbCall), tonumber(rgbCall))
+		local r, g, b = value:match("Color3%.fromRGB%((%d+),%s*(%d+),%s*(%d+)%)")
+		if r then
+			return Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
 		end
 		
 		-- Try to parse Color3.new() function call (0-1 range)
-		local newCall = value:match("Color3%.new%(([%d%.]+),%s*([%d%.]+),%s*([%d%.]+)%)")
-		if newCall then
-			return Color3.new(tonumber(newCall), tonumber(newCall), tonumber(newCall))
+		local r, g, b = value:match("Color3%.new%(([%d%.]+),%s*([%d%.]+),%s*([%d%.]+)%)")
+		if r then
+			return Color3.new(tonumber(r), tonumber(g), tonumber(b))
 		end
 		
 		warn(string.format("Could not parse Color3 value: %s", tostring(value)))
@@ -59,9 +59,9 @@ local function parseValue(instance, propName, value)
 		end
 		
 		-- Try to parse Vector3.new() function call
-		local newCall = value:match("Vector3%.new%(([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+)%)")
-		if newCall then
-			return Vector3.new(tonumber(newCall), tonumber(newCall), tonumber(newCall))
+		local x, y, z = value:match("Vector3%.new%(([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+)%)")
+		if x then
+			return Vector3.new(tonumber(x), tonumber(y), tonumber(z))
 		end
 		
 		warn(string.format("Could not parse Vector3 value: %s", tostring(value)))
@@ -75,17 +75,17 @@ local function parseValue(instance, propName, value)
 		end
 		
 		-- Try to parse CFrame.new() function call with position only
-		local posCall = value:match("CFrame%.new%(([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+)%)")
-		if posCall then
-			return CFrame.new(tonumber(posCall), tonumber(posCall), tonumber(posCall))
+		local x, y, z = value:match("CFrame%.new%(([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+)%)")
+		if x then
+			return CFrame.new(tonumber(x), tonumber(y), tonumber(z))
 		end
 		
 		-- Try to parse CFrame.new() with position and rotation
-		local fullCall = value:match("CFrame%.new%(([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+)%)")
-		if fullCall then
+		local x, y, z, rx, ry, rz = value:match("CFrame%.new%(([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+)%)")
+		if x then
 			return CFrame.new(
-				tonumber(fullCall), tonumber(fullCall), tonumber(fullCall),
-				tonumber(fullCall), tonumber(fullCall), tonumber(fullCall)
+				tonumber(x), tonumber(y), tonumber(z),
+				tonumber(rx), tonumber(ry), tonumber(rz)
 			)
 		end
 		
@@ -114,9 +114,9 @@ local function parseValue(instance, propName, value)
 		end
 		
 		-- Try to parse UDim2.new() function call
-		local newCall = value:match("UDim2%.new%(([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+)%)")
-		if newCall then
-			return UDim2.new(tonumber(newCall), tonumber(newCall), tonumber(newCall), tonumber(newCall))
+		local xs, xo, ys, yo = value:match("UDim2%.new%(([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+),%s*([%d%.%-]+)%)")
+		if xs then
+			return UDim2.new(tonumber(xs), tonumber(xo), tonumber(ys), tonumber(yo))
 		end
 		
 		warn(string.format("Could not parse UDim2 value: %s", tostring(value)))
@@ -338,7 +338,7 @@ function Builder.Build(data)
 				local warningMsg = string.format("Failed to determine parent for asset %d (%s), using Workspace", i, tostring(asset.ClassName))
 				warn(warningMsg)
 				table.insert(buildStats.warnings, warningMsg)
-				instance.Parent = workspace -- Fallback to workspace
+				instance.Parent = game.Workspace -- Fallback to workspace
 				table.insert(createdInstances, instance)
 			end
 		else

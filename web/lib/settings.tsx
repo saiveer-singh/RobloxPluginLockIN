@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 
 export type ThemePreset = 'dark' | 'light' | 'cyberpunk' | 'minimal' | 'ocean' | 'forest' | 'sunset' | 'midnight' | 'dracula' | 'nord';
 
@@ -193,7 +193,6 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     foreground: '#f8f8f2',
     primary: '#bd93f9',
     primaryForeground: '#282a36',
-    secondary: '#9CA3AF',
     secondary: '#44475a',
     accent: '#ff79c6',
     border: '#44475a',
@@ -209,7 +208,6 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     foreground: '#eceff4',
     primary: '#88c0d0',
     primaryForeground: '#2e3440',
-    secondary: '#d8dee9',
     secondary: '#4c566a',
     accent: '#81a1c1',
     border: '#4c566a',
@@ -261,10 +259,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('robloxgen-settings', JSON.stringify(defaultSettings));
   };
 
-  const themeColors = {
+  const themeColors = useMemo(() => ({
     ...themePresets[settings.theme],
     ...settings.customColors,
-  };
+  }), [settings.theme, settings.customColors]);
 
   // Apply theme to CSS variables
   useEffect(() => {

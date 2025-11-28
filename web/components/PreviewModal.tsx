@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 
-export function PreviewModal({ data, onClose }: { data: any, onClose: () => void }) {
+export function PreviewModal({ data, onClose }: { data: unknown, onClose: () => void }) {
   if (!data) return null;
 
   return (

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-let apiKeys: any = {
+let apiKeys: Record<string, string | undefined> = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
@@ -17,7 +17,7 @@ try {
         apiKeys = { ...apiKeys, ...fileKeys };
       }
   }
-} catch (e) {
+} catch {
   // Ignore file read errors
 }
 
@@ -486,14 +486,6 @@ export function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animat
     }
   }
   
-  // Complexity analysis
-  const complexityIndicators = ['advanced', 'complex', 'sophisticated', 'professional', 'production-ready'];
-  const hasComplexity = complexityIndicators.some(indicator => lowerPrompt.includes(indicator));
-  
-  // Length and detail analysis
-  const promptLength = prompt.length;
-  const isDetailed = promptLength > 50; // Longer prompts tend to be more specific
-  
   // Find the best match
   const maxScore = Math.max(...Object.values(scores));
   
@@ -568,10 +560,100 @@ export const MODEL_CONFIGS: Record<ModelProvider, ModelConfig> = {
 };
 
 export interface GenerationResult {
-  content: any;
+  content: unknown;
   model: string;
   tokensUsed: number;
   tokensPerSecond: number;
   duration: number;
   requestType: string;
+}
+
+export async function generateContent(prompt: string, model: string, systemPrompt?: string): Promise<GenerationResult> {
+  const startTime = Date.now();
+
+  const requestType = detectRequestType(prompt);
+
+  let fullSystemPrompt = '';
+  switch (requestType) {
+    case 'scripting':
+      fullSystemPrompt = SCRIPTING_PROMPT;
+      break;
+    case 'vfx':
+      fullSystemPrompt = VFX_PROMPT;
+      break;
+    case 'animation':
+      fullSystemPrompt = ANIMATION_PROMPT;
+      break;
+    case 'modeling':
+      fullSystemPrompt = MODELING_PROMPT;
+      break;
+  }
+
+  if (systemPrompt) {
+    fullSystemPrompt += '\n\n' + systemPrompt;
+  }
+
+  const config = MODEL_CONFIGS[model as keyof typeof MODEL_CONFIGS];
+  if (!config) {
+    throw new Error(`Unsupported model: ${model}`);
+  }
+
+  const apiKey = config.provider === 'openrouter' ? apiKeys.OPENROUTER_API_KEY : apiKeys.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error(`API key not found for provider: ${config.provider}`);
+  }
+
+  console.log('Making API request to OpenRouter with model:', config.modelId);
+
+  const fetchPromise = fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://opencode.ai',
+      'X-Title': 'Roblox Plugin',
+    },
+    body: JSON.stringify({
+      model: config.modelId,
+      messages: [
+        {
+          role: 'system',
+          content: fullSystemPrompt
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 4000,
+      temperature: 0.7
+    })
+  });
+
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Request timed out after 10 seconds')), 10000)
+  );
+
+  const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`API request failed: ${response.status} ${error}`);
+  }
+
+  const data = await response.json();
+  const content = JSON.parse(data.choices[0].message.content);
+
+  const duration = (Date.now() - startTime) / 1000;
+  const tokensUsed = data.usage?.total_tokens || 0;
+  const tokensPerSecond = tokensUsed / duration;
+
+  return {
+    content,
+    model,
+    tokensUsed,
+    tokensPerSecond,
+    duration,
+    requestType,
+  };
 }

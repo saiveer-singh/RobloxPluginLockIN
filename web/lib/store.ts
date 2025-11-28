@@ -1,6 +1,6 @@
 // Simple in-memory store for development
 declare global {
-  var commandQueues: Record<string, any[]>;
+  var commandQueues: Record<string, unknown[]>;
   var pluginStatuses: Record<string, { connected: boolean; lastSeen: number }>;
   var userTokens: Record<string, string>; // token -> userId
 }
@@ -21,7 +21,7 @@ export const consumeQueue = (userId: string) => {
   return items;
 };
 
-export const addToQueue = (cmd: any, userId: string) => {
+export const addToQueue = (cmd: unknown, userId: string) => {
   const queue = getQueue(userId);
   queue.push(cmd);
 };

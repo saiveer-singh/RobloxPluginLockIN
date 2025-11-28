@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useSettings } from '@/lib/settings';
 import type { ModelProvider } from '@/lib/ai';
 import type { ModelInfo } from '@/lib/models';
-import { LogIn, LogOut, Search, Menu, Plus, MessageSquare, Settings, User, Copy, RefreshCw, Send, Loader2, Brain, Code2, SparklesIcon, Film, Boxes, Lightbulb, ShoppingCart, ZapIcon, Dog, MessageCircle, Mountain, CircleDot, Swords, Sun, Check, ChevronDown, Code, X } from 'lucide-react';
+import { LogIn, LogOut, Search, Menu, MessageSquare, Settings, User, Copy, RefreshCw, Send, Loader2, Brain, Code2, SparklesIcon, Film, Boxes, Lightbulb, ShoppingCart, ZapIcon, Dog, MessageCircle, Mountain, CircleDot, Swords, Sun, Check, ChevronDown, Code } from 'lucide-react';
 import { PreviewModal } from '@/components/PreviewModal';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ModelIcon } from '@/components/ModelIcon';
@@ -63,12 +63,19 @@ interface Message {
   content: string;
   timestamp?: number;
   reasoning?: string;
-  data?: any;
+  data?: unknown;
   model?: string;
   requestType?: string;
   tokensUsed?: number;
   tokensPerSecond?: number;
   duration?: number;
+}
+
+interface Thread {
+  id: string;
+  title: string;
+  messages: Message[];
+  timestamp: number;
 }
 
 interface Thread {
@@ -83,34 +90,35 @@ export default function Home() {
     const { data: session } = useSession();
     const { settings } = useSettings();
     const [input, setInput] = useState("");
-    const [messages, setMessages] = useState<any[]>([]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(false);
     const [pluginToken, setPluginToken] = useState<string>("");
     const [systemPrompt, setSystemPrompt] = useState("");
     const [showSystemPrompt, setShowSystemPrompt] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showModelDropdown, setShowModelDropdown] = useState(false);
-    const [threads, setThreads] = useState<any[]>([]);
+    const [threads, setThreads] = useState<Thread[]>([]);
     const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
     const [selectedModel, setSelectedModel] = useState<ModelProvider>('openai/gpt-4o' as ModelProvider);
     const [streamingReasoning, setStreamingReasoning] = useState<string | null>(null);
     const [streamingRequestType, setStreamingRequestType] = useState<string | null>(null);
-    const [previewData, setPreviewData] = useState<any>(null);
+    const [streamingCode, setStreamingCode] = useState<string | null>(null);
+    const [previewData, setPreviewData] = useState<unknown>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [currentModel, setCurrentModel] = useState<ModelInfo | null>(null);
     const [username, setUsername] = useState("");
-    const [connected, setConnected] = useState(false);
+
 
     // Extract userId from session (can be undefined initially)
     const userId = session?.user?.robloxId || undefined;
 
     // Models list
-    const models = [
+    const models = useMemo(() => [
       { id: 'x-ai-grok-4.1-fast-free' as ModelProvider, name: 'Grok 4.1 Fast Free', category: 'Grok' },
       { id: 'z-ai-glm-4.5-air-free' as ModelProvider, name: 'GLM 4.5 Air Free', category: 'GLM' },
       { id: 'moonshotai-kimi-k2-free' as ModelProvider, name: 'Kimi K2 Free', category: 'Moonshot' },
       { id: 'qwen-qwen3-coder-free' as ModelProvider, name: 'Qwen 3 Coder Free', category: 'Qwen' }
-    ];
+    ], []);
 
     // Load system prompt from localStorage on mount
     useEffect(() => {
@@ -183,128 +191,9 @@ export default function Home() {
         }
       }
     }, [models, selectedModel]);
-  
-  // Legacy models list (kept for reference, but now using getEnabledModels)
-  const _legacyModels = [
-    // OpenAI - Latest
-    { id: 'openai-gpt-5' as ModelProvider, name: 'GPT-5', category: 'OpenAI' },
-    { id: 'openai-gpt-5-reasoning' as ModelProvider, name: 'GPT-5 (Reasoning)', category: 'OpenAI' },
-    { id: 'openai-gpt-5-mini' as ModelProvider, name: 'GPT-5 mini', category: 'OpenAI' },
-    { id: 'openai-gpt-5-nano' as ModelProvider, name: 'GPT-5 nano', category: 'OpenAI' },
-    { id: 'openai-gpt-5.1-instant' as ModelProvider, name: 'GPT-5.1 (Instant)', category: 'OpenAI' },
-    { id: 'openai-gpt-5.1-reasoning' as ModelProvider, name: 'GPT-5.1 (Reasoning)', category: 'OpenAI' },
-    { id: 'openai-gpt-4.1' as ModelProvider, name: 'GPT-4.1', category: 'OpenAI' },
-    { id: 'openai-gpt-4.1-mini' as ModelProvider, name: 'GPT-4.1 Mini', category: 'OpenAI' },
-    { id: 'openai-gpt-4.1-nano' as ModelProvider, name: 'GPT-4.1 Nano', category: 'OpenAI' },
-    { id: 'openai-o3' as ModelProvider, name: 'O3', category: 'OpenAI' },
-    { id: 'openai-o3-pro' as ModelProvider, name: 'O3 Pro', category: 'OpenAI' },
-    { id: 'openai-o3-mini' as ModelProvider, name: 'O3 Mini', category: 'OpenAI' },
-    { id: 'openai-o4-mini' as ModelProvider, name: 'O4 Mini', category: 'OpenAI' },
-    { id: 'openai-gpt-4o' as ModelProvider, name: 'GPT-4o', category: 'OpenAI' },
-    { id: 'openai-gpt-4o-mini' as ModelProvider, name: 'GPT-4o Mini', category: 'OpenAI' },
-    { id: 'openai-o1-preview' as ModelProvider, name: 'O1 Preview', category: 'OpenAI' },
-    { id: 'openai-o1-mini' as ModelProvider, name: 'O1 Mini', category: 'OpenAI' },
-    { id: 'openai-gpt-4-turbo' as ModelProvider, name: 'GPT-4 Turbo', category: 'OpenAI' },
-    { id: 'openai-gpt-3.5-turbo' as ModelProvider, name: 'GPT-3.5 Turbo', category: 'OpenAI' },
-    // Anthropic Claude - Latest
-    { id: 'openrouter-claude-opus-4.5' as ModelProvider, name: 'Claude Opus 4.5', category: 'Anthropic' },
-    { id: 'openrouter-claude-3.7-sonnet' as ModelProvider, name: 'Claude 3.7 Sonnet', category: 'Anthropic' },
-    { id: 'openrouter-claude-3.7-sonnet-reasoning' as ModelProvider, name: 'Claude 3.7 Sonnet (Reasoning)', category: 'Anthropic' },
-    { id: 'openrouter-claude-4-sonnet' as ModelProvider, name: 'Claude 4 Sonnet', category: 'Anthropic' },
-    { id: 'openrouter-claude-4-sonnet-reasoning' as ModelProvider, name: 'Claude 4 Sonnet (Reasoning)', category: 'Anthropic' },
-    { id: 'openrouter-claude-sonnet-4.5' as ModelProvider, name: 'Claude Sonnet 4.5', category: 'Anthropic' },
-    { id: 'openrouter-claude-sonnet-4.5-reasoning' as ModelProvider, name: 'Claude Sonnet 4.5 (Reasoning)', category: 'Anthropic' },
-    { id: 'openrouter-claude-4.1-opus' as ModelProvider, name: 'Claude 4.1 Opus', category: 'Anthropic' },
-    { id: 'openrouter-claude-haiku-4.5' as ModelProvider, name: 'Claude Haiku 4.5', category: 'Anthropic' },
-    { id: 'openrouter-claude-haiku-4.5-reasoning' as ModelProvider, name: 'Claude Haiku 4.5 (Reasoning)', category: 'Anthropic' },
-    { id: 'openrouter-claude-3.5-sonnet' as ModelProvider, name: 'Claude 3.5 Sonnet', category: 'Anthropic' },
-    { id: 'openrouter-claude-3-opus' as ModelProvider, name: 'Claude 3 Opus', category: 'Anthropic' },
-    { id: 'openrouter-claude-3-haiku' as ModelProvider, name: 'Claude 3 Haiku', category: 'Anthropic' },
-    // Google Gemini - Latest
-    { id: 'gemini-3-pro' as ModelProvider, name: 'Gemini 3 Pro', category: 'Google' },
-    { id: 'gemini-2.5-pro' as ModelProvider, name: 'Gemini 2.5 Pro', category: 'Google' },
-    { id: 'gemini-2.5-flash' as ModelProvider, name: 'Gemini 2.5 Flash', category: 'Google' },
-    { id: 'gemini-2.5-flash-thinking' as ModelProvider, name: 'Gemini 2.5 Flash (Thinking)', category: 'Google' },
-    { id: 'gemini-2.5-flash-lite' as ModelProvider, name: 'Gemini 2.5 Flash Lite', category: 'Google' },
-    { id: 'gemini-2.5-flash-lite-thinking' as ModelProvider, name: 'Gemini 2.5 Flash Lite (Thinking)', category: 'Google' },
-    { id: 'gemini-2.0-flash' as ModelProvider, name: 'Gemini 2.0 Flash', category: 'Google' },
-    { id: 'gemini-2.0-flash-lite' as ModelProvider, name: 'Gemini 2.0 Flash Lite', category: 'Google' },
-    { id: 'gemini-1.5-pro' as ModelProvider, name: 'Gemini 1.5 Pro', category: 'Google' },
-    { id: 'gemini-pro' as ModelProvider, name: 'Gemini Pro', category: 'Google' },
-    { id: 'gemini-flash' as ModelProvider, name: 'Gemini Flash', category: 'Google' },
-    // Meta Llama - Latest
-    { id: 'openrouter-llama-4-maverick' as ModelProvider, name: 'Llama 4 Maverick', category: 'Meta' },
-    { id: 'openrouter-llama-4-scout' as ModelProvider, name: 'Llama 4 Scout', category: 'Meta' },
-    { id: 'openrouter-llama-3.3-70b' as ModelProvider, name: 'Llama 3.3 70B', category: 'Meta' },
-    { id: 'openrouter-llama-3.2-90b' as ModelProvider, name: 'Llama 3.2 90B', category: 'Meta' },
-    { id: 'openrouter-llama-3.1-70b' as ModelProvider, name: 'Llama 3.1 70B', category: 'Meta' },
-    { id: 'openrouter-llama-3-70b' as ModelProvider, name: 'Llama 3 70B', category: 'Meta' },
-    // Mistral - Latest
-    { id: 'openrouter-mistral-large-2' as ModelProvider, name: 'Mistral Large 2', category: 'Mistral' },
-    { id: 'openrouter-mistral-large' as ModelProvider, name: 'Mistral Large', category: 'Mistral' },
-    { id: 'openrouter-mixtral-8x7b' as ModelProvider, name: 'Mixtral 8x7B', category: 'Mistral' },
-    // DeepSeek - Latest
-    { id: 'openrouter-deepseek-v3.2-exp' as ModelProvider, name: 'DeepSeek v3.2 Exp', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-v3.2-exp-thinking' as ModelProvider, name: 'DeepSeek v3.2 Exp (Thinking)', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-v3.1-terminus' as ModelProvider, name: 'DeepSeek v3.1 Terminus', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-v3.1-terminus-thinking' as ModelProvider, name: 'DeepSeek v3.1 Terminus (Thinking)', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-v3.1' as ModelProvider, name: 'DeepSeek v3.1', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-v3.1-thinking' as ModelProvider, name: 'DeepSeek v3.1 (Thinking)', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-v3-0324' as ModelProvider, name: 'DeepSeek v3 (0324)', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-r1-0528' as ModelProvider, name: 'DeepSeek R1 (0528)', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-r1-qwen-distilled' as ModelProvider, name: 'DeepSeek R1 (Qwen Distilled)', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-r1-original' as ModelProvider, name: 'DeepSeek R1 (Original)', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-v3' as ModelProvider, name: 'DeepSeek V3', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-chat' as ModelProvider, name: 'DeepSeek Chat', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-coder' as ModelProvider, name: 'DeepSeek Coder', category: 'DeepSeek' },
-    { id: 'openrouter-deepseek-r1' as ModelProvider, name: 'DeepSeek R1', category: 'DeepSeek' },
-    // Qwen - Latest
-    { id: 'openrouter-qwen-3-235b' as ModelProvider, name: 'Qwen 3 235B', category: 'Qwen' },
-    { id: 'openrouter-qwen-3-235b-thinking' as ModelProvider, name: 'Qwen 3 235B (Thinking)', category: 'Qwen' },
-    { id: 'openrouter-qwen-3-coder' as ModelProvider, name: 'Qwen 3 Coder', category: 'Qwen' },
-    { id: 'openrouter-qwen-3-32b' as ModelProvider, name: 'Qwen 3 32B', category: 'Qwen' },
-    { id: 'openrouter-qwen-2.5-32b' as ModelProvider, name: 'Qwen 2.5 32B', category: 'Qwen' },
-    // GLM - Latest
-    { id: 'openrouter-glm-4.6' as ModelProvider, name: 'GLM 4.6', category: 'GLM' },
-    { id: 'openrouter-glm-4.6-thinking' as ModelProvider, name: 'GLM 4.6 (Thinking)', category: 'GLM' },
-    { id: 'openrouter-glm-4.5' as ModelProvider, name: 'GLM 4.5', category: 'GLM' },
-    { id: 'openrouter-glm-4.5-thinking' as ModelProvider, name: 'GLM 4.5 (Thinking)', category: 'GLM' },
-    { id: 'openrouter-glm-4.5v' as ModelProvider, name: 'GLM 4.5V', category: 'GLM' },
-    { id: 'openrouter-glm-4.5v-thinking' as ModelProvider, name: 'GLM 4.5V (Thinking)', category: 'GLM' },
-    { id: 'openrouter-glm-4.5-air' as ModelProvider, name: 'GLM 4.5 Air', category: 'GLM' },
-    { id: 'openrouter-glm-4.5-air-thinking' as ModelProvider, name: 'GLM 4.5 Air (Thinking)', category: 'GLM' },
-    // Grok - Latest
-    { id: 'openrouter-grok-4.1-fast' as ModelProvider, name: 'Grok 4.1 Fast', category: 'Grok' },
-    { id: 'openrouter-grok-4.1-fast-reasoning' as ModelProvider, name: 'Grok 4.1 Fast (Reasoning)', category: 'Grok' },
-    { id: 'openrouter-grok-4-fast' as ModelProvider, name: 'Grok 4 Fast', category: 'Grok' },
-    { id: 'openrouter-grok-4-fast-reasoning' as ModelProvider, name: 'Grok 4 Fast (Reasoning)', category: 'Grok' },
-    { id: 'openrouter-grok-4' as ModelProvider, name: 'Grok 4', category: 'Grok' },
-    { id: 'openrouter-grok-3' as ModelProvider, name: 'Grok 3', category: 'Grok' },
-    { id: 'openrouter-grok-3-mini' as ModelProvider, name: 'Grok 3 Mini', category: 'Grok' },
-    // Moonshot - Latest
-    { id: 'openrouter-kimi-k2-0905' as ModelProvider, name: 'Kimi K2 (0905)', category: 'Moonshot' },
-    { id: 'openrouter-kimi-k2-0711' as ModelProvider, name: 'Kimi K2 (0711)', category: 'Moonshot' },
-    { id: 'openrouter-kimi-k2-thinking' as ModelProvider, name: 'Kimi K2 (Thinking)', category: 'Moonshot' },
-    // MiniMax
-    { id: 'openrouter-minimax-m2' as ModelProvider, name: 'MiniMax M2', category: 'MiniMax' },
-    // Other
-    { id: 'openrouter-bert-nebulon-alpha' as ModelProvider, name: 'Bert Nebulon Alpha', category: 'Other' },
-  ];
 
-  useEffect(() => {
-    if (!pluginToken) return;
-    // Poll for status
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/status?token=${encodeURIComponent(pluginToken)}`);
-        const data = await res.json();
-        setConnected(data.connected);
-      } catch (e) {
-        setConnected(false);
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [pluginToken]);
+
+
 
    // Load threads from localStorage on mount
    useEffect(() => {
@@ -356,12 +245,12 @@ export default function Home() {
      }
    }, [messages, currentThreadId]);
 
-   // Auto-scroll to bottom when new messages arrive (if enabled)
-   useEffect(() => {
-     if (settings.autoScroll && scrollRef.current) {
-       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-     }
-   }, [messages, streamingReasoning, streamingRequestType, settings.autoScroll]);
+    // Auto-scroll to bottom when new messages arrive (if enabled)
+    useEffect(() => {
+      if (settings.autoScroll && scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, [messages, streamingReasoning, streamingRequestType, streamingCode, settings.autoScroll]);
 
    const createNewThread = useCallback(() => {
      const newThreadId = Date.now().toString();
@@ -407,21 +296,27 @@ export default function Home() {
        }
      }
 
-     setInput("");
-     setLoading(true);
-     setStreamingReasoning(null);
+      setInput("");
+      setLoading(true);
+      setStreamingReasoning(null);
+      setStreamingCode(null);
 
-      try {
-         const res = await fetch('/api/generate', {
-           method: 'POST',
-           headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify({
-             prompt: userMsg.content,
-             model: selectedModel,
-             systemPrompt: systemPrompt || undefined,
-             userId
-           })
-         });
+       try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+          const res = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: userMsg.content,
+              model: selectedModel,
+              systemPrompt: systemPrompt || undefined,
+              userId
+            }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
 
        if (!res.ok) {
          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -431,44 +326,71 @@ export default function Home() {
 
        if (data.error) throw new Error(data.error);
 
-       // Start streaming the reasoning if enabled
-       if (settings.reasoningEnabled && data.reasoning) {
-         setStreamingRequestType(data.requestType);
-         setStreamingReasoning(data.reasoning);
-         // Wait for typing to complete before showing full message
-         const typingSpeed = settings.typingSpeed === 'fast' ? 10 : settings.typingSpeed === 'slow' ? 30 : 20;
-         await new Promise(resolve => setTimeout(resolve, data.reasoning.length * typingSpeed + 500));
-       }
+        // Start streaming the reasoning if enabled
+        if (settings.reasoningEnabled && data.reasoning) {
+          setStreamingRequestType(data.requestType);
+          setStreamingReasoning(data.reasoning);
+          // Wait for typing to complete before showing full message
+          const typingSpeed = settings.typingSpeed === 'fast' ? 10 : settings.typingSpeed === 'slow' ? 30 : 20;
+          await new Promise(resolve => setTimeout(resolve, data.reasoning.length * typingSpeed + 500));
+        }
 
-       const aiMsg: Message = {
-         role: 'ai',
-         content: data.message,
-         timestamp: Date.now(),
-         reasoning: data.reasoning,
-         data: data,
-         model: data.model,
-         requestType: data.requestType,
-         tokensUsed: data.tokensUsed,
-         tokensPerSecond: data.tokensPerSecond,
-         duration: data.duration
-       };
-       setMessages((prev: Message[]) => [...prev, aiMsg]);
-       setStreamingReasoning(null);
-       setStreamingRequestType(null);
-     } catch (e: any) {
-       console.error('Send message error:', e);
-       const errorMsg: Message = {
-         role: 'error',
-         content: e.message || 'An unexpected error occurred',
-         timestamp: Date.now()
-       };
-       setMessages((prev: Message[]) => [...prev, errorMsg]);
-       setStreamingReasoning(null);
-       setStreamingRequestType(null);
-     } finally {
-       setLoading(false);
-     }
-    }, [input, loading, currentThreadId, threads, selectedModel, systemPrompt, settings, createNewThread]);
+        // Stream the generated code/assets if any
+        if (data.assets && data.assets.length > 0) {
+          const codeAsset = data.assets.find((asset) => asset.ClassName === 'Script' || asset.ClassName === 'LocalScript' || asset.ClassName === 'ModuleScript');
+          if (codeAsset && codeAsset.Properties.Source) {
+            setStreamingCode('');
+            // Stream the code character by character
+            const code = codeAsset.Properties.Source;
+            const codeTypingSpeed = 5; // Fast typing for code
+            for (let i = 0; i < code.length; i++) {
+              await new Promise(resolve => setTimeout(resolve, codeTypingSpeed));
+              setStreamingCode(code.slice(0, i + 1));
+            }
+            // Wait a bit after code is done
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        const aiMsg: Message = {
+          role: 'ai',
+          content: data.message,
+          timestamp: Date.now(),
+          reasoning: data.reasoning,
+          data: data,
+          model: data.model,
+          requestType: data.requestType,
+          tokensUsed: data.tokensUsed,
+          tokensPerSecond: data.tokensPerSecond,
+          duration: data.duration
+        };
+        setMessages((prev: Message[]) => [...prev, aiMsg]);
+        setStreamingReasoning(null);
+        setStreamingRequestType(null);
+        setStreamingCode(null);
+       } catch (e: unknown) {
+         console.error('Send message error:', e);
+         let errorContent = 'An unexpected error occurred';
+         if (e instanceof Error) {
+           if (e.name === 'AbortError') {
+             errorContent = 'Request timed out after 15 seconds. Please try again.';
+           } else {
+             errorContent = e.message;
+           }
+         }
+         const errorMsg: Message = {
+           role: 'error',
+           content: errorContent,
+           timestamp: Date.now()
+         };
+        setMessages((prev: Message[]) => [...prev, errorMsg]);
+        setStreamingReasoning(null);
+        setStreamingRequestType(null);
+        setStreamingCode(null);
+      } finally {
+        setLoading(false);
+      }
+    }, [input, loading, currentThreadId, threads, selectedModel, systemPrompt, settings, createNewThread, userId]);
 
   const copyToken = async () => {
     if (pluginToken) {
@@ -476,7 +398,7 @@ export default function Home() {
     }
   };
 
-  const regenerateToken = async () => {
+  const regenerateToken = useCallback(async () => {
     try {
       const res = await fetch('/api/generate-token', {
         method: 'POST',
@@ -489,9 +411,9 @@ export default function Home() {
         localStorage.setItem(`plugin-token-${userId}`, data.token);
       }
     } catch (e) {
-      console.error('Failed to regenerate token:', e);
+      console.error('Regenerate token error:', e);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     const storedToken = localStorage.getItem(`plugin-token-${userId}`);
@@ -500,7 +422,7 @@ export default function Home() {
     } else {
       regenerateToken();
     }
-  }, []);
+  }, [userId, regenerateToken]);
 
   if (loading) {
     return (
@@ -931,52 +853,81 @@ export default function Home() {
             {loading && streamingReasoning && (
               <div className="flex justify-start">
                 <div className="max-w-2xl p-4 rounded-xl bg-card border border-border">
-                 {streamingRequestType && (
-                   <div className="mb-2">
-                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                       streamingRequestType === 'scripting' ? 'bg-blue-500 text-blue-400 border border-blue-800' :
-                       streamingRequestType === 'vfx' ? 'bg-purple-500 text-purple-400 border border-purple-800' :
-                       streamingRequestType === 'animation' ? 'bg-pink-500 text-pink-400 border border-pink-800' :
-                       'bg-orange-500 text-orange-400 border border-orange-800'
-                     }`}>
-                       {streamingRequestType === 'scripting' && <Code2 className="w-3 h-3" />}
-                       {streamingRequestType === 'vfx' && <SparklesIcon className="w-3 h-3" />}
-                       {streamingRequestType === 'animation' && <Film className="w-3 h-3" />}
-                       {streamingRequestType === 'modeling' && <Boxes className="w-3 h-3" />}
-                       {' '}
-                       {streamingRequestType.charAt(0).toUpperCase() + streamingRequestType.slice(1)} Mode
-                     </span>
-                   </div>
-                 )}
-                     <div className="mb-3 p-3 bg-primary border border-primary rounded-lg" style={{opacity: 0.1}}>
-                   <div className="flex items-center gap-2 mb-2">
-                     <Brain className="w-4 h-4 text-primary animate-pulse" />
-                      <span className="text-xs font-bold text-primary uppercase">AI Reasoning</span>
-                   </div>
-                    <p className="text-sm text-primary leading-relaxed">
-                     <TypingText text={streamingReasoning} speed={15} />
-                   </p>
-                 </div>
-                 <div className="space-y-2">
-                   <div className="flex items-center gap-2">
-                     <div className="relative">
-                       <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                       <div className="absolute inset-0 w-4 h-4 border-2 border-primary rounded-full animate-ping opacity-30"></div>
-                     </div>
-                      <span className="text-secondary text-sm">Generating with {currentModel?.name}...</span>
-                   </div>
-                    <div className="flex items-center gap-2 text-xs text-secondary">
-                     <div className="flex gap-1">
-                       <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                       <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                       <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                     </div>
-                     <span>Analyzing requirements • Optimizing code • Creating assets</span>
-                   </div>
-                 </div>
-               </div>
-             </div>
-           )}
+                  {streamingRequestType && (
+                    <div className="mb-2">
+                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                        streamingRequestType === 'scripting' ? 'bg-blue-500 text-blue-400 border border-blue-800' :
+                        streamingRequestType === 'vfx' ? 'bg-purple-500 text-purple-400 border border-purple-800' :
+                        streamingRequestType === 'animation' ? 'bg-pink-500 text-pink-400 border border-pink-800' :
+                        'bg-orange-500 text-orange-400 border border-orange-800'
+                      }`}>
+                        {streamingRequestType === 'scripting' && <Code2 className="w-3 h-3" />}
+                        {streamingRequestType === 'vfx' && <SparklesIcon className="w-3 h-3" />}
+                        {streamingRequestType === 'animation' && <Film className="w-3 h-3" />}
+                        {streamingRequestType === 'modeling' && <Boxes className="w-3 h-3" />}
+                        {' '}
+                        {streamingRequestType.charAt(0).toUpperCase() + streamingRequestType.slice(1)} Mode
+                      </span>
+                    </div>
+                  )}
+                      <div className="mb-3 p-3 bg-primary border border-primary rounded-lg" style={{opacity: 0.1}}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Brain className="w-4 h-4 text-primary animate-pulse" />
+                       <span className="text-xs font-bold text-primary uppercase">AI Reasoning</span>
+                    </div>
+                     <p className="text-sm text-primary leading-relaxed">
+                      <TypingText text={streamingReasoning} speed={15} />
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                        <div className="absolute inset-0 w-4 h-4 border-2 border-primary rounded-full animate-ping opacity-30"></div>
+                      </div>
+                       <span className="text-secondary text-sm">Generating with {currentModel?.name}...</span>
+                    </div>
+                     <div className="flex items-center gap-2 text-xs text-secondary">
+                      <div className="flex gap-1">
+                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                      </div>
+                      <span>Analyzing requirements • Optimizing code • Creating assets</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Streaming Code Display */}
+            {loading && streamingCode !== null && (
+              <div className="flex justify-start">
+                <div className="max-w-4xl p-4 rounded-xl bg-card border border-border">
+                  <div className="mb-2">
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-500 text-green-400 border border-green-800">
+                      <Code className="w-3 h-3" />
+                      {' '}
+                      Live Coding
+                    </span>
+                  </div>
+                  <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 font-mono text-sm text-green-400 overflow-x-auto">
+                    <pre className="whitespace-pre-wrap">
+                      {streamingCode}
+                      {!streamingCode.endsWith('\n') && <span className="animate-pulse">|</span>}
+                    </pre>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-xs text-secondary">
+                    <div className="flex gap-1">
+                      <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '0ms'}}></div>
+                      <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '200ms'}}></div>
+                      <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '400ms'}}></div>
+                    </div>
+                    <span>Writing code • Adding logic • Optimizing performance</span>
+                  </div>
+                </div>
+              </div>
+            )}
           
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
