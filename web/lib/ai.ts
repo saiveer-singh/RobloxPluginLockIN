@@ -16,11 +16,11 @@ function getApiKeys(): Record<string, string | undefined> {
           const file = fs.readFileSync(keysPath, 'utf8');
           try {
             const fileKeys = JSON.parse(file);
-            // Merge keys, letting environment variables take precedence if they exist and are not empty
+            // Merge keys, letting file variables take precedence to allow local override
             keys = {
-              OPENAI_API_KEY: keys.OPENAI_API_KEY || fileKeys.OPENAI_API_KEY,
-              OPENROUTER_API_KEY: keys.OPENROUTER_API_KEY || fileKeys.OPENROUTER_API_KEY,
-              GEMINI_API_KEY: keys.GEMINI_API_KEY || fileKeys.GEMINI_API_KEY,
+              OPENAI_API_KEY: fileKeys.OPENAI_API_KEY || keys.OPENAI_API_KEY,
+              OPENROUTER_API_KEY: fileKeys.OPENROUTER_API_KEY || keys.OPENROUTER_API_KEY,
+              GEMINI_API_KEY: fileKeys.GEMINI_API_KEY || keys.GEMINI_API_KEY,
               ...fileKeys // Include any other keys from file
             };
           } catch (e) {
@@ -644,6 +644,7 @@ export async function generateContent(prompt: string, model: string, systemPromp
   }
 
   console.log('Making API request to OpenRouter with model:', config.modelId);
+  console.log(`Using API Key: ${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 4)}`);
 
   const fetchPromise = fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
