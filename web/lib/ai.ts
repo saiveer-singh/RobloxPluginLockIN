@@ -1,34 +1,37 @@
 import fs from 'fs';
 import path from 'path';
 
-let apiKeys: Record<string, string | undefined> = {
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-};
+function getApiKeys(): Record<string, string | undefined> {
+  let keys: Record<string, string | undefined> = {
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  };
 
-try {
-  // Always try reading file in Node environment to supplement env vars
-  if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-      const keysPath = path.join(process.cwd(), 'api-keys.json');
-      if (fs.existsSync(keysPath)) {
-        const file = fs.readFileSync(keysPath, 'utf8');
-        try {
-          const fileKeys = JSON.parse(file);
-          // Merge keys, letting environment variables take precedence if they exist and are not empty
-          apiKeys = {
-            OPENAI_API_KEY: apiKeys.OPENAI_API_KEY || fileKeys.OPENAI_API_KEY,
-            OPENROUTER_API_KEY: apiKeys.OPENROUTER_API_KEY || fileKeys.OPENROUTER_API_KEY,
-            GEMINI_API_KEY: apiKeys.GEMINI_API_KEY || fileKeys.GEMINI_API_KEY,
-            ...fileKeys // Include any other keys from file
-          };
-        } catch (e) {
-          console.error('Failed to parse api-keys.json:', e);
+  try {
+    // Always try reading file in Node environment to supplement env vars
+    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+        const keysPath = path.join(process.cwd(), 'api-keys.json');
+        if (fs.existsSync(keysPath)) {
+          const file = fs.readFileSync(keysPath, 'utf8');
+          try {
+            const fileKeys = JSON.parse(file);
+            // Merge keys, letting file variables take precedence to allow local override
+            keys = {
+              OPENAI_API_KEY: fileKeys.OPENAI_API_KEY || keys.OPENAI_API_KEY,
+              OPENROUTER_API_KEY: fileKeys.OPENROUTER_API_KEY || keys.OPENROUTER_API_KEY,
+              GEMINI_API_KEY: fileKeys.GEMINI_API_KEY || keys.GEMINI_API_KEY,
+              ...fileKeys // Include any other keys from file
+            };
+          } catch (e) {
+            console.error('Failed to parse api-keys.json:', e);
+          }
         }
-      }
+    }
+  } catch (e) {
+    console.warn('Error loading api-keys.json:', e);
   }
-} catch (e) {
-  console.warn('Error loading api-keys.json:', e);
+  return keys;
 }
 
 const BASE_SCHEMA = `
@@ -634,12 +637,14 @@ export async function generateContent(prompt: string, model: string, systemPromp
     throw new Error(`Unsupported model: ${model}`);
   }
 
-  const apiKey = config.provider === 'openrouter' ? apiKeys.OPENROUTER_API_KEY : apiKeys.OPENAI_API_KEY;
+  const currentApiKeys = getApiKeys();
+  const apiKey = config.provider === 'openrouter' ? currentApiKeys.OPENROUTER_API_KEY : currentApiKeys.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error(`API key not found for provider: ${config.provider}. Please set OPENROUTER_API_KEY or OPENAI_API_KEY.`);
   }
 
   console.log('Making API request to OpenRouter with model:', config.modelId);
+  console.log(`Using API Key: ${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 4)}`);
 
   const fetchPromise = fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',

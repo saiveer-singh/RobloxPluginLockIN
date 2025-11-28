@@ -200,26 +200,37 @@ export default function Home() {
      }
    }, [threads, settings.autoSave, settings.cacheEnabled]);
 
-   // Load current thread messages when thread changes
+   // Synchronization effect: Load messages when switching threads
    useEffect(() => {
      if (currentThreadId) {
-       const thread = threads.find((t: Thread) => t.id === currentThreadId);
+       const thread = threads.find(t => t.id === currentThreadId);
        if (thread) {
          setMessages(thread.messages);
        }
      } else {
        setMessages([]);
      }
-   }, [currentThreadId, threads]);
+     // CRITICAL: Exclude 'threads' from dependency array to prevent infinite loop.
+     // We only want to load messages when the ID changes.
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [currentThreadId]);
 
-   // Save messages to current thread with proper typing
+   // Save messages to current thread
    useEffect(() => {
      if (currentThreadId && messages.length > 0) {
-       setThreads((prev: Thread[]) => prev.map((t: Thread) =>
-         t.id === currentThreadId
-           ? { ...t, messages, updatedAt: Date.now() }
-           : t
-       ));
+       setThreads((prev: Thread[]) => {
+          // Check if we actually need to update to avoid unnecessary re-renders
+          const currentThread = prev.find(t => t.id === currentThreadId);
+          if (currentThread && JSON.stringify(currentThread.messages) === JSON.stringify(messages)) {
+            return prev;
+          }
+
+          return prev.map((t: Thread) =>
+           t.id === currentThreadId
+             ? { ...t, messages, updatedAt: Date.now() }
+             : t
+         );
+       });
      }
    }, [messages, currentThreadId]);
 
@@ -281,7 +292,7 @@ export default function Home() {
 
        try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+          const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout for slower models
 
           const res = await fetch('/api/generate', {
             method: 'POST',
@@ -405,12 +416,16 @@ export default function Home() {
   useEffect(() => {
     if (!userId) return;
 
+    let mounted = true;
+
     const validateAndSetToken = async () => {
       const storedToken = localStorage.getItem(`plugin-token-${userId}`);
       if (storedToken) {
         try {
           // Verify if the token is still valid on the server
           const res = await fetch(`/api/status?token=${storedToken}`);
+          if (!mounted) return;
+
           if (res.ok) {
              setPluginToken(storedToken);
           } else {
@@ -419,6 +434,7 @@ export default function Home() {
              regenerateToken();
           }
         } catch (e) {
+           if (!mounted) return;
            console.error('Token validation failed', e);
            // Fallback to regeneration if validation request fails
            regenerateToken();
@@ -429,6 +445,10 @@ export default function Home() {
     };
 
     validateAndSetToken();
+
+    return () => {
+      mounted = false;
+    };
   }, [userId, regenerateToken]);
 
   if (loading) {
