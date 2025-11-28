@@ -578,6 +578,32 @@ export interface GenerationResult {
   requestType: string;
 }
 
+/**
+ * Cleans the AI response to extract valid JSON.
+ * Removes markdown code blocks and finds the substring between the first '{' and last '}'.
+ */
+export function cleanJson(text: string): string {
+  if (!text) return text;
+
+  // Remove markdown code blocks (```json ... ``` or just ``` ... ```)
+  // We use a simple replacement for common patterns
+  let cleaned = text;
+
+  // Remove ```json and ```
+  // Using simple replaceAll if available or global regex
+  cleaned = cleaned.replace(/```json/g, '').replace(/```/g, '');
+
+  // Find the first '{' and last '}'
+  const firstOpen = cleaned.indexOf('{');
+  const lastClose = cleaned.lastIndexOf('}');
+
+  if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
+    cleaned = cleaned.substring(firstOpen, lastClose + 1);
+  }
+
+  return cleaned.trim();
+}
+
 export async function generateContent(prompt: string, model: string, systemPrompt?: string): Promise<GenerationResult> {
   const startTime = Date.now();
 
@@ -640,8 +666,9 @@ export async function generateContent(prompt: string, model: string, systemPromp
     })
   });
 
+  // Increased timeout to 60 seconds for complex generations
   const timeoutPromise = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Request timed out after 10 seconds')), 10000)
+    setTimeout(() => reject(new Error('Request timed out after 60 seconds')), 60000)
   );
 
   const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
@@ -652,7 +679,22 @@ export async function generateContent(prompt: string, model: string, systemPromp
   }
 
   const data = await response.json();
-  const content = JSON.parse(data.choices[0].message.content);
+  const rawContent = data.choices?.[0]?.message?.content;
+
+  if (!rawContent) {
+    throw new Error('No content returned from AI');
+  }
+
+  let content;
+  try {
+    const cleanedContent = cleanJson(rawContent);
+    content = JSON.parse(cleanedContent);
+  } catch (e) {
+    console.error('Failed to parse AI response:', e);
+    console.error('Raw content:', rawContent);
+    console.error('Cleaned content:', cleanJson(rawContent));
+    throw new Error(`Failed to parse AI response. The model generated invalid JSON: ${(e as Error).message}`);
+  }
 
   const duration = (Date.now() - startTime) / 1000;
   const tokensUsed = data.usage?.total_tokens || 0;
