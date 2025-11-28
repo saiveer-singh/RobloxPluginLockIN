@@ -2,16 +2,16 @@
 
 :root {
   /* Default dark theme variables */
-  --val-background: #0a0a0a;
-  --val-foreground: #ffffff;
+  --val-background: #18181b;
+  --val-foreground: #e4e4e7;
   --val-primary: #8b5cf6;
   --val-primary-foreground: #ffffff;
-  --val-secondary: #9ca3af;
+  --val-secondary: #a1a1aa;
   --val-accent: #f59e0b;
-  --val-border: #374151;
-  --val-card: #1f2937;
-  --val-input: #111827;
-  --val-hover: #374151;
+  --val-border: #3f3f46;
+  --val-card: #27272a;
+  --val-input: #27272a;
+  --val-hover: #3f3f46;
   --val-success: #10b981;
   --val-error: #ef4444;
   --val-warning: #f59e0b;

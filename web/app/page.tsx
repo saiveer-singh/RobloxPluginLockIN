@@ -690,7 +690,7 @@ export default function Home() {
                   <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     {/* Confetti pieces */}
                     {Array.from({ length: 20 }, (_, i) => {
-                      const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7', '#a29bfe'];
+                      const colors = ['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#e4e4e7', '#ffffff'];
                       const left = Math.random() * 100;
                       const delay = Math.random() * 10;
                       const duration = 8 + Math.random() * 4;
@@ -719,7 +719,7 @@ export default function Home() {
                       const left = 20 + Math.random() * 60;
                       const top = 20 + Math.random() * 60;
                       const delay = 2 + Math.random() * 8;
-                      const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b'];
+                      const colors = ['#8b5cf6', '#a78bfa', '#c4b5fd', '#ffffff'];
                       return (
                         <div
                           key={`firework-${i}`}
@@ -795,14 +795,14 @@ export default function Home() {
                    </div>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                      {[
-                       { text: "Create a futuristic shop UI with blur effects", icon: ShoppingCart, category: "UI" },
-                       { text: "Make a red laser beam VFX", icon: ZapIcon, category: "VFX" },
-                       { text: "Build a pet system with XP & leaderboards", icon: Dog, category: "Systems" },
-                       { text: "Create an NPC dialogue system", icon: MessageCircle, category: "Gameplay" },
-                       { text: "Make a floating island model", icon: Mountain, category: "Modeling" },
-                       { text: "Create a holographic portal effect", icon: CircleDot, category: "VFX" },
-                       { text: "Build a weapon system with animations", icon: Swords, category: "Combat" },
-                       { text: "Create a day/night cycle system", icon: Sun, category: "Environment" }
+                       { text: "Script a DataStore leaderboard system", icon: Code2, category: "Systems" },
+                       { text: "Create a raycasting gun script", icon: Swords, category: "Combat" },
+                       { text: "Make a GUI shop with tweening", icon: ShoppingCart, category: "UI" },
+                       { text: "Build a low-poly pet model", icon: Dog, category: "Modeling" },
+                       { text: "Create a fire aura particle effect", icon: ZapIcon, category: "VFX" },
+                       { text: "Script a round-based game loop", icon: Sun, category: "Gameplay" },
+                       { text: "Make a custom character controller", icon: MessageCircle, category: "Systems" },
+                       { text: "Create an R15 walking animation", icon: Film, category: "Animation" }
                      ].map((suggestion) => (
                        <button
                          key={suggestion.text}
