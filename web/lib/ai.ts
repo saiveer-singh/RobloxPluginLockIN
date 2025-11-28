@@ -674,8 +674,18 @@ export async function generateContent(prompt: string, model: string, systemPromp
   const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`API request failed: ${response.status} ${error}`);
+    let errorText = await response.text();
+    try {
+      const json = JSON.parse(errorText);
+      if (json.error && json.error.message) {
+        errorText = json.error.message;
+      } else if (json.error) {
+        errorText = typeof json.error === 'string' ? json.error : JSON.stringify(json.error);
+      }
+    } catch {
+      // Use raw text if JSON parse fails
+    }
+    throw new Error(`OpenRouter API Error: ${errorText} (Status: ${response.status})`);
   }
 
   const data = await response.json();
