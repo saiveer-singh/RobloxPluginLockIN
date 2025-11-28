@@ -296,13 +296,21 @@ export default function Home() {
           });
           clearTimeout(timeoutId);
 
-       if (!res.ok) {
-         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+       let data;
+       try {
+         data = await res.json();
+       } catch (e) {
+         // If JSON parse fails, check status
+         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+         // If status was ok but JSON failed, rethrow
+         throw e;
        }
 
-       const data = await res.json();
+       if (!res.ok) {
+         throw new Error(data?.error || `HTTP ${res.status}: ${res.statusText}`);
+       }
 
-       if (data.error) throw new Error(data.error);
+       if (data?.error) throw new Error(data.error);
 
         // Start streaming the reasoning if enabled
         if (settings.reasoningEnabled && data.reasoning) {
