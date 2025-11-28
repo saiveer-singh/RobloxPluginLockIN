@@ -144,28 +144,6 @@ export default function Home() {
       setCurrentModel(model || null);
     }, [selectedModel, models]);
 
-    // Generate plugin token
-    useEffect(() => {
-      const storedToken = localStorage.getItem(`plugin-token-${userId}`);
-      if (storedToken) {
-        setPluginToken(storedToken);
-      } else {
-        // Generate new token via API
-        fetch('/api/generate-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId })
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.token) {
-            setPluginToken(data.token);
-            localStorage.setItem(`plugin-token-${userId}`, data.token);
-          }
-        })
-        .catch(console.error);
-      }
-    }, [userId]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -399,6 +377,7 @@ export default function Home() {
   };
 
   const regenerateToken = useCallback(async () => {
+    if (!userId) return;
     try {
       const res = await fetch('/api/generate-token', {
         method: 'POST',
@@ -416,12 +395,32 @@ export default function Home() {
   }, [userId]);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem(`plugin-token-${userId}`);
-    if (storedToken) {
-      setPluginToken(storedToken);
-    } else {
-      regenerateToken();
-    }
+    if (!userId) return;
+
+    const validateAndSetToken = async () => {
+      const storedToken = localStorage.getItem(`plugin-token-${userId}`);
+      if (storedToken) {
+        try {
+          // Verify if the token is still valid on the server
+          const res = await fetch(`/api/status?token=${storedToken}`);
+          if (res.ok) {
+             setPluginToken(storedToken);
+          } else {
+             // Token invalid (server restarted?), regenerate
+             console.log('Stored token invalid, regenerating...');
+             regenerateToken();
+          }
+        } catch (e) {
+           console.error('Token validation failed', e);
+           // Fallback to regeneration if validation request fails
+           regenerateToken();
+        }
+      } else {
+        regenerateToken();
+      }
+    };
+
+    validateAndSetToken();
   }, [userId, regenerateToken]);
 
   if (loading) {

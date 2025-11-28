@@ -8,17 +8,27 @@ let apiKeys: Record<string, string | undefined> = {
 };
 
 try {
-  // Only try reading file if keys are missing and we are in a Node environment
-  if (!apiKeys.OPENAI_API_KEY && typeof process !== 'undefined' && process.versions && process.versions.node) {
+  // Always try reading file in Node environment to supplement env vars
+  if (typeof process !== 'undefined' && process.versions && process.versions.node) {
       const keysPath = path.join(process.cwd(), 'api-keys.json');
       if (fs.existsSync(keysPath)) {
         const file = fs.readFileSync(keysPath, 'utf8');
-        const fileKeys = JSON.parse(file);
-        apiKeys = { ...apiKeys, ...fileKeys };
+        try {
+          const fileKeys = JSON.parse(file);
+          // Merge keys, letting environment variables take precedence if they exist and are not empty
+          apiKeys = {
+            OPENAI_API_KEY: apiKeys.OPENAI_API_KEY || fileKeys.OPENAI_API_KEY,
+            OPENROUTER_API_KEY: apiKeys.OPENROUTER_API_KEY || fileKeys.OPENROUTER_API_KEY,
+            GEMINI_API_KEY: apiKeys.GEMINI_API_KEY || fileKeys.GEMINI_API_KEY,
+            ...fileKeys // Include any other keys from file
+          };
+        } catch (e) {
+          console.error('Failed to parse api-keys.json:', e);
+        }
       }
   }
-} catch {
-  // Ignore file read errors
+} catch (e) {
+  console.warn('Error loading api-keys.json:', e);
 }
 
 const BASE_SCHEMA = `
@@ -600,7 +610,7 @@ export async function generateContent(prompt: string, model: string, systemPromp
 
   const apiKey = config.provider === 'openrouter' ? apiKeys.OPENROUTER_API_KEY : apiKeys.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error(`API key not found for provider: ${config.provider}`);
+    throw new Error(`API key not found for provider: ${config.provider}. Please set OPENROUTER_API_KEY or OPENAI_API_KEY.`);
   }
 
   console.log('Making API request to OpenRouter with model:', config.modelId);
