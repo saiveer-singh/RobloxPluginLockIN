@@ -69,16 +69,16 @@ const defaultSettings: Settings = {
 
 const themePresets: Record<ThemePreset, ThemeColors> = {
   dark: {
-    background: '#0a0a0a',
-    foreground: '#ffffff',
+    background: '#18181b',
+    foreground: '#e4e4e7',
     primary: '#8b5cf6',
     primaryForeground: '#ffffff',
-    secondary: '#9ca3af',
+    secondary: '#a1a1aa',
     accent: '#f59e0b',
-    border: '#374151',
-    card: '#1f2937',
-    input: '#111827',
-    hover: '#374151',
+    border: '#3f3f46',
+    card: '#27272a',
+    input: '#27272a',
+    hover: '#3f3f46',
     success: '#10b981',
     error: '#ef4444',
     warning: '#f59e0b',
