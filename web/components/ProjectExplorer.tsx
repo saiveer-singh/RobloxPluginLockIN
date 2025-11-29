@@ -19,6 +19,29 @@ import {
 } from 'lucide-react';
 import { useProject, ProjectAsset } from '@/lib/project-context';
 
+// Fallback icons for those not imported/mapped
+// Note: Some icons above might not be imported to save space/complexity, 
+// so we use this component to safely render with fallbacks.
+const Flask = ({ className }: { className?: string }) => <Terminal className={className} />;
+const Hammer = ({ className }: { className?: string }) => <Briefcase className={className} />;
+const HardHat = ({ className }: { className?: string }) => <Briefcase className={className} />;
+const Triangle = ({ className }: { className?: string }) => <Box className={className} />;
+const Car = ({ className }: { className?: string }) => <Box className={className} />;
+const Armchair = ({ className }: { className?: string }) => <Box className={className} />;
+const AppWindow = ({ className }: { className?: string }) => <Monitor className={className} />;
+const Maximize = ({ className }: { className?: string }) => <Square className={className} />;
+const Circle = ({ className }: { className?: string }) => <Box className={className} />;
+const Palette = ({ className }: { className?: string }) => <Zap className={className} />;
+const Move = ({ className }: { className?: string }) => <Activity className={className} />;
+const Move3d = ({ className }: { className?: string }) => <Activity className={className} />;
+const RotateCw = ({ className }: { className?: string }) => <Activity className={className} />;
+const Flame = ({ className }: { className?: string }) => <Zap className={className} />;
+const Bomb = ({ className }: { className?: string }) => <Zap className={className} />;
+const PersonStanding = ({ className }: { className?: string }) => <User className={className} />;
+const Hand = ({ className }: { className?: string }) => <MousePointer className={className} />;
+const Shirt = ({ className }: { className?: string }) => <User className={className} />;
+const Scissors = ({ className }: { className?: string }) => <User className={className} />;
+
 // Comprehensive mapping of Roblox Classes to Lucide Icons
 const CLASS_ICON_MAP: Record<string, React.ElementType> = {
   // Services
@@ -162,30 +185,6 @@ const CLASS_ICON_MAP: Record<string, React.ElementType> = {
   decals: ImageIcon,
   texture: Grid,
 };
-
-// Fallback icons for those not imported/mapped
-// Note: Some icons above might not be imported to save space/complexity, 
-// so we use this component to safely render with fallbacks.
-const Flask = ({ className }: { className?: string }) => <Terminal className={className} />;
-const Hammer = ({ className }: { className?: string }) => <Briefcase className={className} />;
-const HardHat = ({ className }: { className?: string }) => <Briefcase className={className} />;
-const Triangle = ({ className }: { className?: string }) => <Box className={className} />;
-const Car = ({ className }: { className?: string }) => <Box className={className} />;
-const Armchair = ({ className }: { className?: string }) => <Box className={className} />;
-const AppWindow = ({ className }: { className?: string }) => <Monitor className={className} />;
-const Maximize = ({ className }: { className?: string }) => <Square className={className} />;
-const Circle = ({ className }: { className?: string }) => <Box className={className} />;
-const Palette = ({ className }: { className?: string }) => <Zap className={className} />;
-const Move = ({ className }: { className?: string }) => <Activity className={className} />;
-const Move3d = ({ className }: { className?: string }) => <Activity className={className} />;
-const RotateCw = ({ className }: { className?: string }) => <Activity className={className} />;
-const Flame = ({ className }: { className?: string }) => <Zap className={className} />;
-const Bomb = ({ className }: { className?: string }) => <Zap className={className} />;
-const PersonStanding = ({ className }: { className?: string }) => <User className={className} />;
-const Hand = ({ className }: { className?: string }) => <MousePointer className={className} />;
-const Shirt = ({ className }: { className?: string }) => <User className={className} />;
-const Scissors = ({ className }: { className?: string }) => <User className={className} />;
-
 
 const AssetIcon = ({ className }: { className: string }) => {
   const cls = className ? className.toLowerCase() : '';
