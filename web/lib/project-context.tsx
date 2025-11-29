@@ -210,3 +210,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     </ProjectContext.Provider>
   );
 }
+
+export function useProject() {
+  const context = useContext(ProjectContext);
+  if (context === undefined) {
+    throw new Error('useProject must be used within a ProjectProvider');
+  }
+  return context;
+}
