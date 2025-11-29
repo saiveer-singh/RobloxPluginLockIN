@@ -51,6 +51,19 @@ body {
   transition: background-color var(--animation-duration), color var(--animation-duration);
 }
 
+/* Ensure form elements have correct base contrast even without utility classes */
+input, textarea, select, button {
+  background-color: var(--val-input);
+  color: var(--val-foreground);
+  border-color: var(--val-border);
+}
+
+/* Placeholder contrast */
+::placeholder {
+  color: var(--val-secondary);
+  opacity: 1; /* Firefox lowers opacity by default */
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
