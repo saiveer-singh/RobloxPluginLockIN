@@ -33,5 +33,17 @@ function Network.SendHeartbeat()
 	end)
 end
 
-return Network
+function Network.SyncProject(tree)
+	if token == "" then return end
+	pcall(function()
+		HttpService:PostAsync(
+			BASE_URL .. "/sync",
+			HttpService:JSONEncode({
+				token = token,
+				tree = tree
+			})
+		)
+	end)
+end
 
+return Network

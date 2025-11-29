@@ -3,17 +3,76 @@ local Selection = game:GetService("Selection")
 local Network = require(script.Parent.Network)
 local Builder = require(script.Parent.Builder)
 
+-- New function to serialize the game tree
+local function serializeGameTree()
+    local services = {
+        game.Workspace,
+        game.Lighting,
+        game.ReplicatedFirst,
+        game.ReplicatedStorage,
+        game.ServerScriptService,
+        game.ServerStorage,
+        game.StarterGui,
+        game.StarterPack,
+        game.StarterPlayer,
+        game.SoundService,
+        game.Chat
+        -- Add others as needed
+    }
+
+    local function serializeInstance(inst)
+        local node = {
+            id = inst:GetDebugId(0), -- Not stable across sessions but good enough for tree diff
+            name = inst.Name,
+            className = inst.ClassName,
+            children = {},
+            properties = {} -- Populate minimal properties if needed
+        }
+        
+        -- Populate Source property for Scripts (essential for AI editing)
+        if inst:IsA("Script") or inst:IsA("LocalScript") or inst:IsA("ModuleScript") then
+             -- Be careful with large sources
+             -- node.properties.Source = inst.Source 
+             -- For now, let's send it so AI can edit it. 
+             -- In prod, might want to truncate or only send on demand.
+             -- But "Sync" implies sending state.
+             node.properties.Source = inst.Source
+        end
+        
+        -- Basic properties
+        pcall(function()
+             if inst:IsA("BasePart") then
+                 node.properties.Position = tostring(inst.Position)
+                 node.properties.Size = tostring(inst.Size)
+                 node.properties.Color = tostring(inst.Color)
+             end
+        end)
+
+        for _, child in ipairs(inst:GetChildren()) do
+            table.insert(node.children, serializeInstance(child))
+        end
+        return node
+    end
+
+    local tree = {}
+    for _, service in ipairs(services) do
+        table.insert(tree, serializeInstance(service))
+    end
+    
+    return tree
+end
+
 local toolbar = plugin:CreateToolbar("RobloxGenAI")
-local button = toolbar:CreateButton("Toggle", "Toggle AI Panel", "") -- Empty string for icon (no custom icon)
+local button = toolbar:CreateButton("Toggle", "Toggle AI Panel", "") 
 
 local widgetInfo = DockWidgetPluginGuiInfo.new(
 	Enum.InitialDockState.Float,
-	false,   -- enabled initially
-	false,  -- overrides previous enabled
-	200,    -- float x
-	300,    -- float y
-	150,    -- min x
-	150     -- min y
+	false,   
+	false,  
+	200,    
+	300,    
+	150,    
+	150     
 )
 
 local widget = plugin:CreateDockWidgetPluginGui("RobloxGenAIParams", widgetInfo)
@@ -74,6 +133,27 @@ tokenBox:GetPropertyChangedSignal("Text"):Connect(function()
 	plugin:SetSetting("RobloxGenToken", newToken)
 end)
 
+-- Sync Button
+local syncButton = Instance.new("TextButton")
+syncButton.Size = UDim2.new(0.9, 0, 0, 30)
+syncButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+syncButton.TextColor3 = Color3.fromRGB(255,255,255)
+syncButton.Text = "Sync Project to Web"
+syncButton.Font = Enum.Font.SourceSansBold
+syncButton.TextSize = 16
+syncButton.Parent = gui
+local uiCornerSync = Instance.new("UICorner")
+uiCornerSync.Parent = syncButton
+
+syncButton.MouseButton1Click:Connect(function()
+    statusLabel.Text = "Syncing..."
+    local tree = serializeGameTree()
+    Network.SyncProject(tree)
+    statusLabel.Text = "Synced!"
+    wait(2)
+    statusLabel.Text = "Connected"
+end)
+
 local logLabel = Instance.new("TextLabel")
 logLabel.Size = UDim2.new(0.9, 0, 0, 20)
 logLabel.BackgroundTransparency = 1
@@ -83,7 +163,7 @@ logLabel.TextXAlignment = Enum.TextXAlignment.Left
 logLabel.Parent = gui
 
 local logScroll = Instance.new("ScrollingFrame")
-logScroll.Size = UDim2.new(0.9, 0, 1, -80)
+logScroll.Size = UDim2.new(0.9, 0, 1, -120) -- Adjusted size for sync button
 logScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 logScroll.Parent = gui
 local logList = Instance.new("UIListLayout")
@@ -128,10 +208,13 @@ local function loop()
                         local success, err = pcall(function()
                             local instances = Builder.Build(cmd)
                             if instances and #instances > 0 then
-                                -- Instances are already placed in correct hierarchy by Builder
                                 Selection:Set(instances)
                                 ChangeHistoryService:SetWaypoint("AI Generation")
-                                addLog("Created " .. #instances .. " instance(s) in correct hierarchy")
+                                addLog("Created " .. #instances .. " instance(s)")
+                                
+                                -- Auto-sync after generation so web sees it immediately
+                                local tree = serializeGameTree()
+                                Network.SyncProject(tree)
                             end
                         end)
 
@@ -167,17 +250,10 @@ widget:GetPropertyChangedSignal("Enabled"):Connect(function()
 			isPolling = true
 			task.spawn(loop)
 		end
-	else
-        -- We don't stop the loop variable so it resumes easily, 
-        -- but inside the loop we check enabled.
-        -- Or we can stop it.
-        -- isPolling = false
 	end
 end)
 
--- Start loop if enabled on load (unlikely for dock widgets but good practice)
 if widget.Enabled then
     isPolling = true
     task.spawn(loop)
 end
-
