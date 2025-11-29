@@ -942,14 +942,14 @@ function ChatInterface() {
                       </span>
                     </div>
                   )}
-                      <div className="mb-3 p-3 bg-primary border border-primary rounded-lg" style={{opacity: 0.1}}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Brain className="w-4 h-4 text-primary animate-pulse" />
-                       <span className="text-xs font-bold text-primary uppercase">AI Reasoning</span>
+                      <div className="mb-4 pl-4 border-l-2 border-primary/30">
+                    <div className="flex items-center gap-2 mb-1 opacity-70">
+                      <Brain className="w-3 h-3 text-primary animate-pulse" />
+                       <span className="text-xs font-medium text-primary">Thinking...</span>
                     </div>
-                     <p className="text-sm text-primary leading-relaxed whitespace-pre-wrap">
+                     <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
                       {streamingReasoning}
-                      <span className="animate-pulse">|</span>
+                      <span className="animate-pulse ml-1">|</span>
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -1029,12 +1029,12 @@ function ChatInterface() {
                 
                 {/* Reasoning Display */}
                 {msg.reasoning && (
-        <div className="mb-3 p-3 bg-primary border border-primary rounded-lg opacity-10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Brain className="w-4 h-4 text-primary" />
-                       <span className="text-xs font-bold text-primary uppercase">Reasoning</span>
+        <div className="mb-4 pl-4 border-l-2 border-primary/30">
+                    <div className="flex items-center gap-2 mb-1 opacity-70">
+                      <Brain className="w-3 h-3 text-primary" />
+                       <span className="text-xs font-medium text-primary">Reasoning</span>
                     </div>
-                    <p className="text-sm text-primary leading-relaxed">{msg.reasoning}</p>
+                    <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{msg.reasoning}</p>
                   </div>
                 )}
                 
