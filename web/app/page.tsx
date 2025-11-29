@@ -898,41 +898,14 @@ function ChatInterface() {
             </div>
           )}
           
-            {/* AI Thinking Indicator */}
-            {loading && !streamingReasoning && (
-              <div className="flex justify-start">
-                <div className="max-w-2xl p-4 rounded-xl bg-card border border-border">
-                 <div className="flex items-center gap-3 mb-3">
-                   <div className="relative">
-                     <Brain className="w-5 h-5 text-primary animate-pulse" />
-                      <div className="absolute inset-0 w-5 h-5 border-2 border-primary rounded-full animate-ping" style={{opacity: 0.2}}></div>
-                   </div>
-                   <div>
-                      <div className="text-foreground text-sm font-medium">AI is thinking...</div>
-                      <div className="text-secondary text-xs">Analyzing your request and planning the solution</div>
-                   </div>
-                 </div>
-                       <div className="flex items-center gap-2 text-xs text-secondary">
-                   <div className="flex gap-1">
-                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '450ms'}}></div>
-                     <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '600ms'}}></div>
-                   </div>
-                   <span>Understanding context • Researching patterns • Designing architecture • Optimizing performance</span>
-                 </div>
-               </div>
-             </div>
-           )}
-
-            {/* Streaming Reasoning Display */}
-            {loading && streamingReasoning && (
-              <div className="flex justify-start">
-                <div className="max-w-2xl p-4 rounded-xl bg-card border border-border">
+            {/* Unified Streaming Message */}
+            {loading && (
+              <div className="flex justify-start animate-fade-in">
+                <div className="max-w-2xl p-4 rounded-xl bg-card border border-border w-full">
+                  {/* Header - Request Type or Loading */}
                   {streamingRequestType && (
-                    <div className="mb-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${ 
+                    <div className="mb-3">
+                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                         streamingRequestType === 'scripting' ? 'bg-blue-500 text-blue-400 border border-blue-800' :
                         streamingRequestType === 'vfx' ? 'bg-purple-500 text-purple-400 border border-purple-800' :
                         streamingRequestType === 'animation' ? 'bg-pink-500 text-pink-400 border border-pink-800' :
@@ -947,62 +920,47 @@ function ChatInterface() {
                       </span>
                     </div>
                   )}
-                      <div className="mb-4 pl-4 border-l-2 border-primary/30">
-                    <div className="flex items-center gap-2 mb-1 opacity-70">
-                      <Brain className="w-3 h-3 text-primary animate-pulse" />
-                       <span className="text-xs font-medium text-primary">Thinking...</span>
-                    </div>
-                     <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
-                      {streamingReasoning}
-                      <span className="animate-pulse ml-1">|</span>
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
-                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                        <div className="absolute inset-0 w-4 h-4 border-2 border-primary rounded-full animate-ping opacity-30"></div>
-                      </div>
-                       <span className="text-secondary text-sm">Generating with {currentModel?.name}...</span>
-                    </div>
-                     <div className="flex items-center gap-2 text-xs text-secondary">
-                      <div className="flex gap-1">
-                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                      </div>
-                      <span>Analyzing requirements • Optimizing code • Creating assets</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {/* Streaming Code Display */}
-            {loading && streamingCode !== null && (
-              <div className="flex justify-start">
-                <div className="max-w-4xl p-4 rounded-xl bg-card border border-border">
-                  <div className="mb-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-500 text-green-400 border border-green-800">
-                      <Code className="w-3 h-3" />
-                      {' '}
-                      Live Coding
-                    </span>
-                  </div>
-                  <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 font-mono text-sm text-green-400 overflow-x-auto">
-                    <pre className="whitespace-pre-wrap">
-                      {streamingCode}
-                      {!streamingCode.endsWith('\n') && <span className="animate-pulse">|</span>}
-                    </pre>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2 text-xs text-secondary">
-                    <div className="flex gap-1">
-                      <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '0ms'}}></div>
-                      <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '200ms'}}></div>
-                      <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse" style={{animationDelay: '400ms'}}></div>
+                  {/* Reasoning Stream */}
+                  {streamingReasoning !== null ? (
+                     <div className="mb-4 pl-4 border-l-2 border-primary/30">
+                        <div className="flex items-center gap-2 mb-1 opacity-70">
+                          <Brain className="w-3 h-3 text-primary animate-pulse" />
+                           <span className="text-xs font-medium text-primary">Thinking...</span>
+                        </div>
+                         <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                          {streamingReasoning}
+                          <span className="animate-pulse ml-1">|</span>
+                        </p>
+                     </div>
+                  ) : (
+                     /* Initial Loading State before reasoning starts */
+                     <div className="flex items-center gap-3 mb-4">
+                        <div className="relative">
+                           <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                        </div>
+                        <div>
+                           <div className="text-foreground text-sm font-medium">AI is thinking...</div>
+                           <div className="text-secondary text-xs">Generating with {currentModel?.name}</div>
+                        </div>
+                     </div>
+                  )}
+
+                  {/* Code Stream */}
+                  {streamingCode && (
+                    <div className="mt-4 pt-4 border-t border-white/5">
+                       <div className="flex items-center gap-2 mb-2">
+                          <Code2 className="w-4 h-4 text-green-400" />
+                          <span className="text-xs font-medium text-green-400">Live Coding</span>
+                       </div>
+                       <div className="bg-black/50 rounded-lg p-3 font-mono text-xs text-green-300 overflow-x-auto border border-white/10">
+                          <pre className="whitespace-pre-wrap">
+                            {streamingCode}
+                            {!streamingCode.endsWith('\n') && <span className="animate-pulse">_</span>}
+                          </pre>
+                       </div>
                     </div>
-                    <span>Writing code • Adding logic • Optimizing performance</span>
-                  </div>
+                  )}
                 </div>
               </div>
             )}
