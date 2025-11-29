@@ -74,6 +74,34 @@ function getTargetServiceId(asset: ProjectAsset): string {
   return 'workspace'; // Default
 }
 
+// Helper to merge/update assets
+function mergeAssets(existing: ProjectAsset[], incoming: ProjectAsset[]) {
+  incoming.forEach(newItem => {
+    const existingItemIndex = existing.findIndex(
+      e => e.name === newItem.name && e.className === newItem.className
+    );
+
+    if (existingItemIndex !== -1) {
+      // Update existing item
+      const existingItem = existing[existingItemIndex];
+      
+      // Merge properties (overwrite with new)
+      existingItem.properties = {
+        ...existingItem.properties,
+        ...newItem.properties
+      };
+
+      // Recursively merge children if any
+      if (newItem.children && newItem.children.length > 0) {
+        mergeAssets(existingItem.children, newItem.children);
+      }
+    } else {
+      // Add as new item
+      existing.push(newItem);
+    }
+  });
+}
+
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [projectTree, setProjectTree] = useState<ProjectAsset[]>(DEFAULT_SERVICES);
 
@@ -98,11 +126,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           }
 
           if (targetNode) {
-            targetNode.children.push(asset);
+            // Smart Merge: Check if asset already exists in this container
+            mergeAssets(targetNode.children, [asset]);
           } else {
-            // Fallback to workspace if logic fails
+            // Fallback to workspace
             const workspace = newTree.find((node: ProjectAsset) => node.id === 'workspace');
-            if (workspace) workspace.children.push(asset);
+            if (workspace) {
+              mergeAssets(workspace.children, [asset]);
+            }
           }
         });
 
@@ -121,12 +152,22 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     const indent = "  ".repeat(depth);
     
     for (const node of nodes) {
-      // Skip empty services to keep context clean, unless it's root level and we want to show structure
-      // Actually, showing structure is good so AI knows where things are.
-      
       result += `${indent}- [${node.className}] ${node.name}`;
+      
       if (node.properties) {
-        // ... (property logging logic)
+        const props = [];
+        if (node.properties.Position) props.push(`Pos: ${node.properties.Position}`);
+        if (node.properties.Size) props.push(`Size: ${node.properties.Size}`);
+        if (node.properties.Color) props.push(`Color: ${node.properties.Color}`);
+        
+        if (props.length > 0) {
+          result += ` { ${props.join(', ')} }`;
+        }
+
+        // Include Script Source for context awareness (essential for editing)
+        if ((node.className.includes('Script') || node.className === 'ModuleScript') && node.properties.Source) {
+           result += `\n${indent}  Source:\n\`\`\`lua\n${node.properties.Source}\n\`\`\``;
+        }
       }
       result += "\n";
       
