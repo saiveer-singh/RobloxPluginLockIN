@@ -129,7 +129,10 @@ export default function Home() {
       { id: 'x-ai-grok-4.1-fast-free' as ModelProvider, name: 'Grok 4.1 Fast Free', category: 'Grok' },
       { id: 'z-ai-glm-4.5-air-free' as ModelProvider, name: 'GLM 4.5 Air Free', category: 'GLM' },
       { id: 'moonshotai-kimi-k2-free' as ModelProvider, name: 'Kimi K2 Free', category: 'Moonshot' },
-      { id: 'qwen-qwen3-coder-free' as ModelProvider, name: 'Qwen 3 Coder Free', category: 'Qwen' }
+      { id: 'qwen-qwen3-coder-free' as ModelProvider, name: 'Qwen 3 Coder Free', category: 'Qwen' },
+      { id: 'gpt-5-nano' as ModelProvider, name: 'GPT 5 Nano', category: 'OpenCode' },
+      { id: 'grok-code' as ModelProvider, name: 'Grok Code Fast 1', category: 'OpenCode' },
+      { id: 'big-pickle' as ModelProvider, name: 'Big Pickle', category: 'OpenCode' }
     ], []);
 
     // Load system prompt from localStorage on mount
@@ -1142,7 +1145,7 @@ export default function Home() {
                    <>
                      <div className="fixed inset-0 z-40" onClick={() => setShowModelDropdown(false)} />
                      <div className="absolute bottom-full left-0 mb-2 w-72 bg-card border border-border rounded-lg overflow-hidden max-h-96 overflow-y-auto shadow-2xl z-50">
-                      {['OpenAI', 'Anthropic', 'Google', 'Meta', 'Mistral', 'DeepSeek', 'Qwen', 'GLM', 'Grok', 'Moonshot', 'MiniMax', 'Other'].filter(cat => 
+                      {['OpenCode', 'OpenAI', 'Anthropic', 'Google', 'Meta', 'Mistral', 'DeepSeek', 'Qwen', 'GLM', 'Grok', 'Moonshot', 'MiniMax', 'Other'].filter(cat => 
                         models.some(m => m.category === cat)
                       ).map((category) => {
                         const categoryModels = models.filter(m => m.category === category);

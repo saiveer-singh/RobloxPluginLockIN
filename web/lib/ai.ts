@@ -6,6 +6,7 @@ function getApiKeys(): Record<string, string | undefined> {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    OPENCODE_API_KEY: process.env.OPENCODE_API_KEY,
   };
 
   try {
@@ -21,6 +22,7 @@ function getApiKeys(): Record<string, string | undefined> {
               OPENAI_API_KEY: keys.OPENAI_API_KEY || fileKeys.OPENAI_API_KEY,
               OPENROUTER_API_KEY: keys.OPENROUTER_API_KEY || fileKeys.OPENROUTER_API_KEY,
               GEMINI_API_KEY: keys.GEMINI_API_KEY || fileKeys.GEMINI_API_KEY,
+              OPENCODE_API_KEY: keys.OPENCODE_API_KEY || fileKeys.OPENCODE_API_KEY,
               ...fileKeys // Include any other keys from file
             };
           } catch (e) {
@@ -541,7 +543,10 @@ export type ModelProvider =
   | 'x-ai-grok-4.1-fast-free'
   | 'z-ai-glm-4.5-air-free'
   | 'moonshotai-kimi-k2-free'
-  | 'qwen-qwen3-coder-free';
+  | 'qwen-qwen3-coder-free'
+  | 'gpt-5-nano'
+  | 'grok-code'
+  | 'big-pickle';
 
 export interface ModelConfig {
   provider: string;
@@ -569,6 +574,21 @@ export const MODEL_CONFIGS: Record<ModelProvider, ModelConfig> = {
     provider: 'openrouter',
     modelId: 'qwen/qwen3-coder:free',
     displayName: 'Qwen 3 Coder Free'
+  },
+  'gpt-5-nano': {
+    provider: 'opencode',
+    modelId: 'gpt-5-nano',
+    displayName: 'GPT 5 Nano'
+  },
+  'grok-code': {
+    provider: 'opencode',
+    modelId: 'grok-code',
+    displayName: 'Grok Code Fast 1'
+  },
+  'big-pickle': {
+    provider: 'opencode',
+    modelId: 'big-pickle',
+    displayName: 'Big Pickle'
   }
 };
 
@@ -638,14 +658,25 @@ export async function generateContent(prompt: string, model: string, systemPromp
   }
 
   const currentApiKeys = getApiKeys();
-  const apiKey = config.provider === 'openrouter' ? currentApiKeys.OPENROUTER_API_KEY : currentApiKeys.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error(`API key not found for provider: ${config.provider}. Please set OPENROUTER_API_KEY or OPENAI_API_KEY.`);
+  let apiKey: string | undefined;
+  let endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+
+  if (config.provider === 'openrouter') {
+    apiKey = currentApiKeys.OPENROUTER_API_KEY;
+  } else if (config.provider === 'opencode') {
+    apiKey = currentApiKeys.OPENCODE_API_KEY;
+    endpoint = 'https://opencode.ai/zen/v1/chat/completions';
+  } else {
+    apiKey = currentApiKeys.OPENAI_API_KEY;
   }
 
-  console.log('Making API request to OpenRouter with model:', config.modelId);
+  if (!apiKey) {
+    throw new Error(`API key not found for provider: ${config.provider}. Please check api-keys.json.`);
+  }
 
-  const fetchPromise = fetch('https://openrouter.ai/api/v1/chat/completions', {
+  console.log('Making API request to', config.provider, 'with model:', config.modelId);
+
+  const fetchPromise = fetch(endpoint, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -757,12 +788,23 @@ export async function generateContentStream(
   }
 
   const currentApiKeys = getApiKeys();
-  const apiKey = config.provider === 'openrouter' ? currentApiKeys.OPENROUTER_API_KEY : currentApiKeys.OPENAI_API_KEY;
+  let apiKey: string | undefined;
+  let endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+
+  if (config.provider === 'openrouter') {
+    apiKey = currentApiKeys.OPENROUTER_API_KEY;
+  } else if (config.provider === 'opencode') {
+    apiKey = currentApiKeys.OPENCODE_API_KEY;
+    endpoint = 'https://opencode.ai/zen/v1/chat/completions';
+  } else {
+    apiKey = currentApiKeys.OPENAI_API_KEY;
+  }
+
   if (!apiKey) {
     throw new Error(`API key not found for provider: ${config.provider}`);
   }
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
