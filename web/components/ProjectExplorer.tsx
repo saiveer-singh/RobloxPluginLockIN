@@ -15,7 +15,7 @@ import {
   CloudRain, CloudSnow, CloudLightning, CloudDrizzle,
   Thermometer, Droplets, Wind, Umbrella,
   Speaker, Mic, Volume2, VolumeX, Headphones,
-  Book, Bookmark, FileText, FilePlus, FileMinus
+  Book, Bookmark, FileText, FilePlus, FileMinus, Film
 } from 'lucide-react';
 import { useProject, ProjectAsset } from '@/lib/project-context';
 
