@@ -4,57 +4,217 @@ import {
   Type, Globe, Users, Sun, Database, Server, HardDrive, LayoutTemplate, 
   Briefcase, User, Flag, Music, MessageSquare, Boxes, FileCode, Radio, Link, 
   Monitor, Square, Scroll, Lightbulb, Sparkles, Activity, Layers, ArrowDownToLine,
-  RefreshCw
+  RefreshCw, Hash, Variable, ToggleLeft, Anchor, Link2, Play, Settings, 
+  Cloud, Map, Eye, MousePointer, Gamepad2, Keyboard, Smartphone, Package,
+  AlertCircle, CheckCircle, HelpCircle, Info, Terminal, Command, 
+  AlignLeft, AlignCenter, AlignRight, Grid, List, Columns, 
+  CreditCard, DollarSign, ShoppingBag, Tag, Video, Camera, Aperture,
+  Component, Cpu, CircuitBoard, Network, Wifi, Bluetooth,
+  Lock, Unlock, Shield, Key, EyeOff, Bell, BellOff,
+  Calendar, Clock, Timer, Watch, MapPin, Navigation,
+  CloudRain, CloudSnow, CloudLightning, CloudDrizzle,
+  Thermometer, Droplets, Wind, Umbrella,
+  Speaker, Mic, Volume2, VolumeX, Headphones,
+  Book, Bookmark, FileText, FilePlus, FileMinus
 } from 'lucide-react';
 import { useProject, ProjectAsset } from '@/lib/project-context';
 
-// ... (AssetIcon and TreeNode components remain unchanged)
-
-// Asset Icon Component - Mimics Roblox Studio Icons using Lucide
-const AssetIcon = ({ className }: { className: string }) => {
-  const cls = className || '';
+// Comprehensive mapping of Roblox Classes to Lucide Icons
+const CLASS_ICON_MAP: Record<string, React.ElementType> = {
+  // Services
+  workspace: Globe,
+  players: Users,
+  lighting: Sun,
+  materialservice: Component,
+  replicatedfirst: ArrowDownToLine,
+  replicatedstorage: Layers,
+  serverscriptservice: Server,
+  serverstorage: HardDrive,
+  startergui: LayoutTemplate,
+  starterpack: Briefcase,
+  starterplayer: User,
+  teams: Flag,
+  soundservice: Music,
+  chat: MessageSquare,
+  textchatservice: MessageSquare,
+  voicechatservice: Mic,
+  localizationservice: Globe,
+  testservice: Flask,
   
-  // Service-level icons
-  if (cls === 'Workspace') return <Globe className="w-4 h-4 text-blue-500" />;
-  if (cls === 'Players') return <Users className="w-4 h-4 text-green-500" />;
-  if (cls === 'Lighting') return <Sun className="w-4 h-4 text-yellow-500" />;
-  if (cls === 'ReplicatedFirst') return <ArrowDownToLine className="w-4 h-4 text-blue-400" />;
-  if (cls === 'ReplicatedStorage') return <Layers className="w-4 h-4 text-blue-400" />;
-  if (cls === 'ServerScriptService') return <Server className="w-4 h-4 text-green-600" />;
-  if (cls === 'ServerStorage') return <HardDrive className="w-4 h-4 text-blue-600" />;
-  if (cls === 'StarterGui') return <LayoutTemplate className="w-4 h-4 text-purple-500" />;
-  if (cls === 'StarterPack') return <Briefcase className="w-4 h-4 text-blue-400" />;
-  if (cls === 'StarterPlayer') return <User className="w-4 h-4 text-green-500" />;
-  if (cls === 'Teams') return <Flag className="w-4 h-4 text-yellow-600" />;
-  if (cls === 'SoundService') return <Music className="w-4 h-4 text-blue-400" />;
-  if (cls === 'Chat') return <MessageSquare className="w-4 h-4 text-blue-500" />;
-
-  // Common Assets
-  if (cls === 'Folder') return <Folder className="w-4 h-4 text-yellow-400 fill-yellow-400/20" />;
-  if (cls === 'Model') return <Boxes className="w-4 h-4 text-white" />;
-  if (cls === 'Part' || cls === 'MeshPart' || cls === 'UnionOperation') return <Box className="w-4 h-4 text-gray-300" />;
+  // Basic Containers
+  folder: Folder,
+  model: Boxes,
+  tool: Hammer,
+  accessory: ShoppingBag,
+  hat: HardHat,
+  
+  // 3D Objects
+  part: Box,
+  meshpart: Box,
+  unionoperation: Component,
+  spawnlocation: MapPin,
+  trusspart: Grid,
+  wedgepart: Triangle,
+  cornerwedgepart: Triangle,
+  vehicle: Car,
+  seat: Armchair,
   
   // Scripts
-  if (cls === 'Script') return <FileCode className="w-4 h-4 text-gray-300" />;
-  if (cls === 'LocalScript') return <FileCode className="w-4 h-4 text-blue-400" />;
-  if (cls === 'ModuleScript') return <FileCode className="w-4 h-4 text-purple-400" />;
+  script: FileCode, // Server script (handled specially for color)
+  localscript: FileCode, // Local script
+  modulescript: FileCode, // Module script
   
-  // UI
-  if (cls === 'ScreenGui') return <Monitor className="w-4 h-4 text-white" />;
-  if (cls.includes('Frame')) return <Square className="w-4 h-4 text-white" />;
-  if (cls.includes('Text')) return <Type className="w-4 h-4 text-white" />;
-  if (cls.includes('Image')) return <ImageIcon className="w-4 h-4 text-orange-400" />;
-  if (cls === 'ScrollingFrame') return <Scroll className="w-4 h-4 text-white" />;
+  // GUI
+  screengui: Monitor,
+  surfacegui: AppWindow,
+  billboardgui: Square,
+  frame: Square,
+  scrollingframe: Scroll,
+  imagelabel: ImageIcon,
+  imagebutton: ImageIcon,
+  textlabel: Type,
+  textbutton: Type,
+  textbox: Type,
+  videoframe: Video,
+  viewportframe: Camera,
+  uigridlayout: Grid,
+  uilistlayout: List,
+  uipadding: Maximize,
+  uicorner: Circle,
+  uistroke: Square,
+  uiaspectratioconstraint: Maximize,
   
-  // Effects & Logic
-  if (cls.includes('Light')) return <Lightbulb className="w-4 h-4 text-yellow-300" />;
-  if (cls === 'ParticleEmitter') return <Sparkles className="w-4 h-4 text-yellow-200" />;
-  if (cls === 'Trail' || cls === 'Beam') return <Activity className="w-4 h-4 text-orange-400" />;
-  if (cls.includes('Event')) return <Radio className="w-4 h-4 text-orange-500" />;
-  if (cls.includes('Function')) return <Link className="w-4 h-4 text-green-500" />;
+  // Values
+  stringvalue: Type,
+  intvalue: Hash,
+  numbervalue: Hash,
+  boolvalue: ToggleLeft,
+  objectvalue: Box,
+  color3value: Palette,
+  vector3value: Move,
+  cframevalue: Move3d,
+  brickcolorvalue: Palette,
+  rayvalue: Move,
   
-  // Fallback
-  return <File className="w-4 h-4 text-gray-400" />;
+  // Physics & Constraints
+  attachment: Anchor,
+  weld: Link2,
+  motor6d: Link2,
+  hingeconstraint: Link2,
+  ballsocketconstraint: Circle,
+  ropeconstraint: Link,
+  rodconstraint: Link,
+  springconstraint: Activity,
+  torsionspringconstraint: Activity,
+  prismaticconstraint: AlignCenter,
+  cylindricalconstraint: AlignCenter,
+  alignposition: Move,
+  alignorientation: RotateCw,
+  
+  // Lighting & Effects
+  sky: Cloud,
+  atmosphere: Cloud,
+  clouds: Cloud,
+  bloom: Sun,
+  blur: EyeOff,
+  colorcorrection: Palette,
+  sunrays: Sun,
+  pointlight: Lightbulb,
+  spotlight: Lightbulb,
+  surfacelight: Lightbulb,
+  particleemitter: Sparkles,
+  trail: Activity,
+  beam: Activity,
+  fire: Flame,
+  smoke: Cloud,
+  sparkles: Sparkles,
+  explosion: Bomb,
+  
+  // Animation
+  animation: Play,
+  animationcontroller: Gamepad2,
+  animator: PersonStanding,
+  keyframesequence: Film,
+  
+  // Audio
+  sound: Speaker,
+  soundgroup: Folder,
+  chorussoundeffect: Music,
+  compressorsoundeffect: Music,
+  distortionsoundeffect: Music,
+  echoeffect: Music,
+  equalizersoundeffect: Music,
+  flangersoundeffect: Music,
+  pitchshiftsoundeffect: Music,
+  reverbsoundeffect: Music,
+  tremolosoundeffect: Music,
+  
+  // Input
+  clickdetector: MousePointer,
+  proximityprompt: Hand,
+  
+  // Misc
+  configuration: Settings,
+  humanoid: User,
+  bodycolors: Palette,
+  shirt: Shirt,
+  pants: Scissors, // Approximate
+  decals: ImageIcon,
+  texture: Grid,
+};
+
+// Fallback icons for those not imported/mapped
+// Note: Some icons above might not be imported to save space/complexity, 
+// so we use this component to safely render with fallbacks.
+const Flask = ({ className }: { className?: string }) => <Terminal className={className} />;
+const Hammer = ({ className }: { className?: string }) => <Briefcase className={className} />;
+const HardHat = ({ className }: { className?: string }) => <Briefcase className={className} />;
+const Triangle = ({ className }: { className?: string }) => <Box className={className} />;
+const Car = ({ className }: { className?: string }) => <Box className={className} />;
+const Armchair = ({ className }: { className?: string }) => <Box className={className} />;
+const AppWindow = ({ className }: { className?: string }) => <Monitor className={className} />;
+const Maximize = ({ className }: { className?: string }) => <Square className={className} />;
+const Circle = ({ className }: { className?: string }) => <Box className={className} />;
+const Palette = ({ className }: { className?: string }) => <Zap className={className} />;
+const Move = ({ className }: { className?: string }) => <Activity className={className} />;
+const Move3d = ({ className }: { className?: string }) => <Activity className={className} />;
+const RotateCw = ({ className }: { className?: string }) => <Activity className={className} />;
+const Flame = ({ className }: { className?: string }) => <Zap className={className} />;
+const Bomb = ({ className }: { className?: string }) => <Zap className={className} />;
+const PersonStanding = ({ className }: { className?: string }) => <User className={className} />;
+const Hand = ({ className }: { className?: string }) => <MousePointer className={className} />;
+const Shirt = ({ className }: { className?: string }) => <User className={className} />;
+const Scissors = ({ className }: { className?: string }) => <User className={className} />;
+
+
+const AssetIcon = ({ className }: { className: string }) => {
+  const cls = className ? className.toLowerCase() : '';
+  
+  // Special Handling for Script Colors
+  if (cls === 'script') return <FileCode className="w-4 h-4 text-gray-300" />; // Server: Grey
+  if (cls === 'localscript') return <FileCode className="w-4 h-4 text-blue-400" />; // Client: Blue
+  if (cls === 'modulescript') return <FileCode className="w-4 h-4 text-purple-400" />; // Module: Purple
+  
+  // Lookup in map
+  const IconComponent = CLASS_ICON_MAP[cls] || File; // Default to File icon
+  
+  // Determine color based on category/type (heuristic)
+  let colorClass = "text-gray-400";
+  
+  if (cls === 'folder') colorClass = "text-yellow-400 fill-yellow-400/20";
+  else if (cls === 'workspace') colorClass = "text-blue-500";
+  else if (cls === 'players' || cls === 'starterplayer' || cls === 'humanoid') colorClass = "text-green-500";
+  else if (cls === 'lighting' || cls === 'pointlight' || cls === 'spotlight' || cls === 'surfacelight') colorClass = "text-yellow-300";
+  else if (cls.includes('storage') || cls.includes('server')) colorClass = "text-blue-400";
+  else if (cls.includes('starter')) colorClass = "text-purple-400";
+  else if (cls === 'part' || cls === 'meshpart') colorClass = "text-white";
+  else if (cls === 'model') colorClass = "text-white";
+  else if (cls.includes('gui') || cls.includes('frame') || cls.includes('button') || cls.includes('label')) colorClass = "text-green-400";
+  else if (cls.includes('value')) colorClass = "text-yellow-600";
+  else if (cls.includes('constraint') || cls === 'attachment') colorClass = "text-orange-400";
+  else if (cls === 'sound' || cls === 'soundservice') colorClass = "text-blue-300";
+  
+  return <IconComponent className={`w-4 h-4 ${colorClass}`} />;
 };
 
 const TreeNode = ({ node, depth = 0 }: { node: ProjectAsset; depth?: number }) => {
@@ -64,7 +224,7 @@ const TreeNode = ({ node, depth = 0 }: { node: ProjectAsset; depth?: number }) =
   return (
     <div className="select-none font-sans">
       <div 
-        className="flex items-center gap-1.5 py-0.5 px-2 hover:bg-white/10 cursor-pointer group transition-colors border-l-2 border-transparent hover:border-blue-500/50"
+        className="flex items-center gap-1.5 py-0.5 px-2 hover:bg-[#2a2d2e] cursor-pointer group transition-colors border-l-2 border-transparent hover:border-[#007acc]"
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
         onClick={() => hasChildren && setIsOpen(!isOpen)}
       >
@@ -79,7 +239,7 @@ const TreeNode = ({ node, depth = 0 }: { node: ProjectAsset; depth?: number }) =
         </div>
         
         {/* Name */}
-        <span className="text-gray-200 text-sm truncate group-hover:text-white">{node.name}</span>
+        <span className="text-[#cccccc] text-sm truncate group-hover:text-white">{node.name}</span>
       </div>
       
       {isOpen && hasChildren && (
@@ -104,14 +264,14 @@ export function ProjectExplorer() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#1e1e1e] border-l border-[#333]">
-      <div className="flex items-center justify-between px-3 py-2 bg-[#252526] border-b border-[#333]">
-        <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Explorer</span>
+    <div className="flex flex-col h-full bg-[#1e1e1e] border-l border-[#3e3e42]">
+      <div className="flex items-center justify-between px-3 py-2 bg-[#252526] border-b border-[#3e3e42]">
+        <span className="text-xs font-bold text-[#cccccc] uppercase tracking-wider">Explorer</span>
         <div className="flex items-center gap-1">
           <button 
             onClick={handleSync}
             disabled={isSyncing}
-            className="text-[10px] text-gray-400 hover:text-white px-2 py-0.5 rounded hover:bg-white/10 transition-colors disabled:opacity-50 flex items-center gap-1"
+            className="text-[10px] text-[#858585] hover:text-white px-2 py-0.5 rounded hover:bg-[#3e3e42] transition-colors disabled:opacity-50 flex items-center gap-1"
             title="Sync from Roblox Studio"
           >
             <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
@@ -120,7 +280,7 @@ export function ProjectExplorer() {
           {projectTree.length > 0 && (
             <button 
               onClick={clearProject}
-              className="text-[10px] text-gray-500 hover:text-white px-2 py-0.5 rounded hover:bg-white/10 transition-colors"
+              className="text-[10px] text-[#858585] hover:text-white px-2 py-0.5 rounded hover:bg-[#3e3e42] transition-colors"
             >
               Clear
             </button>
@@ -130,10 +290,10 @@ export function ProjectExplorer() {
       <div className="flex-1 overflow-y-auto py-1 custom-scrollbar">
         {projectTree.length === 0 ? (
           <div className="p-4 text-center">
-            <div className="text-gray-500 text-xs italic">
+            <div className="text-[#858585] text-xs italic">
               Empty Project
             </div>
-            <div className="mt-2 text-[10px] text-gray-600">
+            <div className="mt-2 text-[10px] text-[#555555]">
               Generated assets will appear here
             </div>
           </div>
