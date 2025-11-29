@@ -20,13 +20,21 @@ export async function POST(req: Request) {
 
     // Accumulate full content for the plugin queue
     let fullContent = '';
+    let buffer = '';
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
 
     const transformStream = new TransformStream({
       async transform(chunk, controller) {
-        const text = decoder.decode(chunk);
-        const lines = text.split('\n');
+        // Append new chunk to buffer
+        buffer += decoder.decode(chunk, { stream: true });
+        
+        const lines = buffer.split('\n');
+        
+        // Process all complete lines (all except the last one)
+        // The last item in lines is either an empty string (if buffer ended in \n)
+        // or the partial start of the next line.
+        buffer = lines.pop() || ''; 
         
         for (const line of lines) {
           if (line.trim() === '' || line.trim() === 'data: [DONE]') continue;
@@ -45,6 +53,20 @@ export async function POST(req: Request) {
         }
       },
       async flush(controller) {
+        // Process any remaining buffer
+        if (buffer.trim() && buffer.startsWith('data: ') && buffer.trim() !== 'data: [DONE]') {
+           try {
+            const json = JSON.parse(buffer.slice(6));
+            const content = json.choices?.[0]?.delta?.content || '';
+            if (content) {
+              fullContent += content;
+              controller.enqueue(encoder.encode(content));
+            }
+          } catch (e) {
+            console.warn('Error parsing final stream chunk:', e);
+          }
+        }
+
         console.log('Stream complete. Processing full content...');
         try {
           const cleanedContent = cleanJson(fullContent);
@@ -53,12 +75,8 @@ export async function POST(req: Request) {
           // Add to queue for the plugin to pick up
           addToQueue(jsonContent, userId);
           
-          // Send a final metadata event or just close
-          // We can't send JSON here easily if we are streaming raw text. 
-          // The client will handle the parsing of the full text it received.
         } catch (e) {
           console.error('Error processing final content:', e);
-          // We can't really report this error to the client since the stream is likely closed or ending
         }
       }
     });
