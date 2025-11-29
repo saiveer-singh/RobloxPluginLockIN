@@ -334,6 +334,9 @@ export default function Home() {
           let fullText = '';
 
           if (reader) {
+            // Initialize streaming reasoning to empty string to show the UI immediately
+            setStreamingReasoning("");
+            
             while (true) {
               const { done, value } = await reader.read();
               if (done) break;
@@ -341,40 +344,44 @@ export default function Home() {
               const chunk = decoder.decode(value, { stream: true });
               fullText += chunk;
 
-              // Try to extract reasoning on the fly
-              // Look for "reasoning": "..."
-              // We use a simple state machine approach or regex to find the reasoning string
-              // Since JSON can be messy during streaming, we look for the key and then capture until we see a non-escaped quote followed by comma or newline
-              
               // Heuristic: Find the reasoning field
-              const reasoningMatch = fullText.match(/"reasoning"\s*:\s*"((?:[^"\\]|\\.)*)/);
-              if (reasoningMatch && reasoningMatch[1]) {
-                 // We have a partial or complete reasoning string
-                 // We can just show what we have so far
-                 // JSON strings are escaped, so we might want to unescape basic chars for display
-                 try {
-                   const unescapedReasoning = reasoningMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-                   setStreamingReasoning(unescapedReasoning);
-                 } catch (e) {
-                   setStreamingReasoning(reasoningMatch[1]);
-                 }
+              // We look for "reasoning": " and capture everything after it
+              const reasoningStart = fullText.indexOf('"reasoning"');
+              if (reasoningStart !== -1) {
+                const valueStart = fullText.indexOf('"', reasoningStart + 11) + 1; // +11 for "reasoning": length approx
+                if (valueStart > 0) {
+                   // Capture until the next unescaped quote, OR until the end of the string if we are still streaming
+                   // This is a bit tricky with regex on incomplete strings, so we use a safer approach
+                   // We just try to match the content.
+                   const match = fullText.slice(valueStart).match(/^((?:[^"\\]|\\.)*)/);
+                   if (match) {
+                      let text = match[1];
+                      // Unescape basic chars for display
+                      try {
+                        text = text.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                      } catch (e) { /* ignore */ }
+                      setStreamingReasoning(text);
+                   }
+                }
               }
 
-              // Heuristic: Find the Source code field (for Scripts)
-              // We look for the "Source" property which contains the Luau code
-              const sourceMatch = fullText.match(/"Source"\s*:\s*"((?:[^"\\]|\\.)*)/);
-              if (sourceMatch && sourceMatch[1]) {
-                try {
-                   // Unescape the string to show actual code newlines and formatting
-                   const unescapedCode = sourceMatch[1]
-                     .replace(/\\n/g, '\n')
-                     .replace(/\\t/g, '\t')
-                     .replace(/\\"/g, '"')
-                     .replace(/\\\\/g, '\\');
-                   setStreamingCode(unescapedCode);
-                } catch (e) {
-                   // Fallback if manual unescape fails
-                   setStreamingCode(sourceMatch[1]);
+              // Heuristic: Find the Source code field
+              const sourceStart = fullText.indexOf('"Source"');
+              if (sourceStart !== -1) {
+                const valueStart = fullText.indexOf('"', sourceStart + 8) + 1;
+                if (valueStart > 0) {
+                   const match = fullText.slice(valueStart).match(/^((?:[^"\\]|\\.)*)/);
+                   if (match) {
+                      let text = match[1];
+                      try {
+                         text = text
+                           .replace(/\\n/g, '\n')
+                           .replace(/\\t/g, '\t')
+                           .replace(/\\"/g, '"')
+                           .replace(/\\\\/g, '\\');
+                      } catch (e) { /* ignore */ }
+                      setStreamingCode(text);
+                   }
                 }
               }
             }
