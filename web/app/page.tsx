@@ -8,6 +8,8 @@ import { LogIn, LogOut, Search, Menu, MessageSquare, Settings, User, Copy, Refre
 import { PreviewModal } from '@/components/PreviewModal';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ModelIcon } from '@/components/ModelIcon';
+import { ProjectProvider, useProject } from '@/lib/project-context';
+import { ProjectExplorer } from '@/components/ProjectExplorer';
 
 // Extend NextAuth types
 declare module "next-auth" {
@@ -75,13 +77,6 @@ interface Thread {
   id: string;
   title: string;
   messages: Message[];
-  timestamp: number;
-}
-
-interface Thread {
-  id: string;
-  title: string;
-  messages: Message[];
   createdAt: number;
   updatedAt: number;
 }
@@ -98,32 +93,218 @@ function cleanJson(text: string): string {
   return cleaned.trim();
 }
 
-import { ProjectProvider, useProject } from '@/lib/project-context';
-import { ProjectExplorer } from '@/components/ProjectExplorer';
-
-// ... (previous imports)
-
-// ... (TypingText component)
-
-// ... (Message/Thread interfaces)
-
-// ... (cleanJson helper)
-
 function ChatInterface() {
     const { data: session } = useSession();
     const { settings } = useSettings();
     const { addAssetToTree, getProjectContextString } = useProject();
     const [input, setInput] = useState("");
-    // ... (rest of state)
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [pluginToken, setPluginToken] = useState<string>("");
+    const [systemPrompt, setSystemPrompt] = useState("");
+    const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    const [showModelDropdown, setShowModelDropdown] = useState(false);
+    const [threads, setThreads] = useState<Thread[]>([]);
+    const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
+    const [selectedModel, setSelectedModel] = useState<ModelProvider>('openai/gpt-4o' as ModelProvider);
+    const [streamingReasoning, setStreamingReasoning] = useState<string | null>(null);
+    const [streamingRequestType, setStreamingRequestType] = useState<string | null>(null);
+    const [streamingCode, setStreamingCode] = useState<string | null>(null);
+    const [previewData, setPreviewData] = useState<unknown>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentModel, setCurrentModel] = useState<ModelInfo | null>(null);
+    const [username, setUsername] = useState("");
 
-    // ... (useEffect hooks)
+
+    // Extract userId from session (can be undefined initially)
+    const userId = session?.user?.robloxId || undefined;
+
+    // Models list
+    const models = useMemo(() => [
+      { id: 'x-ai-grok-4.1-fast-free' as ModelProvider, name: 'Grok 4.1 Fast Free', category: 'Grok' },
+      { id: 'z-ai-glm-4.5-air-free' as ModelProvider, name: 'GLM 4.5 Air Free', category: 'GLM' },
+      { id: 'moonshotai-kimi-k2-free' as ModelProvider, name: 'Kimi K2 Free', category: 'Moonshot' },
+      { id: 'qwen-qwen3-coder-free' as ModelProvider, name: 'Qwen 3 Coder Free', category: 'Qwen' },
+      { id: 'gpt-5-nano' as ModelProvider, name: 'GPT 5 Nano', category: 'OpenCode' },
+      { id: 'grok-code' as ModelProvider, name: 'Grok Code Fast 1', category: 'OpenCode' },
+      { id: 'big-pickle' as ModelProvider, name: 'Big Pickle', category: 'OpenCode' }
+    ], []);
+
+    // Load system prompt from localStorage on mount
+    useEffect(() => {
+      const savedPrompt = localStorage.getItem('robloxgen-system-prompt');
+      if (savedPrompt) {
+        setSystemPrompt(savedPrompt);
+      }
+    }, []);
+
+    // Save system prompt to localStorage whenever it changes
+    useEffect(() => {
+      localStorage.setItem('robloxgen-system-prompt', systemPrompt);
+    }, [systemPrompt]);
+
+    // Set default model
+    useEffect(() => {
+      setSelectedModel('x-ai-grok-4.1-fast-free' as ModelProvider);
+    }, []);
+
+    // Set currentModel when selectedModel changes
+    useEffect(() => {
+      const model = models.find(m => m.id === selectedModel);
+      setCurrentModel(model || null);
+    }, [selectedModel, models]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowModelDropdown(false);
+      }
+    };
+    if (showModelDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+   }, [showModelDropdown]);
+
+     // Ensure selectedModel is valid, fallback to first available model or default
+    useEffect(() => {
+      if (!selectedModel || !models.find(m => m.id === selectedModel)) {
+        const defaultModelId = models.find(m => m.id === 'x-ai-grok-4.1-fast-free')?.id || models[0]?.id;
+        if (defaultModelId) {
+          setSelectedModel(defaultModelId as ModelProvider);
+        }
+      }
+    }, [models, selectedModel]);
+
+
+
+
+   // Load threads from localStorage on mount
+   useEffect(() => {
+     if (settings.cacheEnabled) {
+       const savedThreads = localStorage.getItem('robloxgen-threads');
+       if (savedThreads) {
+         try {
+           const parsed: Thread[] = JSON.parse(savedThreads);
+           // Filter out old threads if we exceed maxThreads
+           const filteredThreads = parsed
+             .sort((a, b) => b.updatedAt - a.updatedAt)
+             .slice(0, settings.maxThreads);
+           setThreads(filteredThreads);
+         } catch (e) {
+           console.error('Failed to load threads:', e);
+           setThreads([]);
+         }
+       }
+     }
+   }, [settings.cacheEnabled, settings.maxThreads]);
+
+   // Save threads to localStorage whenever they change (with auto-save check)
+   useEffect(() => {
+     if (settings.autoSave && settings.cacheEnabled) {
+       localStorage.setItem('robloxgen-threads', JSON.stringify(threads));
+     }
+   }, [threads, settings.autoSave, settings.cacheEnabled]);
+
+   // Synchronization effect: Load messages when switching threads
+   useEffect(() => {
+     if (currentThreadId) {
+       const thread = threads.find(t => t.id === currentThreadId);
+       if (thread) {
+         setMessages(thread.messages);
+       }
+     } else {
+       setMessages([]);
+     }
+     // CRITICAL: Exclude 'threads' from dependency array to prevent infinite loop.
+     // We only want to load messages when the ID changes.
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [currentThreadId]);
+
+   // Save messages to current thread
+   useEffect(() => {
+     if (currentThreadId && messages.length > 0) {
+       setThreads((prev: Thread[]) => {
+          // Check if we actually need to update to avoid unnecessary re-renders
+          const currentThread = prev.find(t => t.id === currentThreadId);
+          if (currentThread && JSON.stringify(currentThread.messages) === JSON.stringify(messages)) {
+            return prev;
+          }
+
+          return prev.map((t: Thread) =>
+           t.id === currentThreadId
+             ? { ...t, messages, updatedAt: Date.now() }
+             : t
+         );
+       });
+     }
+   }, [messages, currentThreadId]);
+
+    // Auto-scroll to bottom when new messages arrive (if enabled)
+    useEffect(() => {
+      if (settings.autoScroll && scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, [messages, streamingReasoning, streamingRequestType, streamingCode, settings.autoScroll]);
+
+   const createNewThread = useCallback(() => {
+     const newThreadId = Date.now().toString();
+     const newThread: Thread = {
+       id: newThreadId,
+       title: 'New Chat',
+       messages: [],
+       createdAt: Date.now(),
+       updatedAt: Date.now()
+     };
+     setThreads((prev: Thread[]) => [newThread, ...prev]);
+     setCurrentThreadId(newThreadId);
+     setMessages([]);
+     setInput("");
+   }, []);
 
    const sendMessage = useCallback(async () => {
-     // ... (start of function)
+     if (!input.trim() || loading) return;
+
+     // Create new thread if none exists
+     if (!currentThreadId) {
+       createNewThread();
+       await new Promise(resolve => setTimeout(resolve, 100));
+     }
+
+     const userMsg: Message = {
+       role: 'user',
+       content: input.trim(),
+       timestamp: Date.now()
+     };
+     const threadId = currentThreadId || threads[0]?.id;
+
+     setMessages((prev: Message[]) => [...prev, userMsg]);
+
+     // Update thread title from first message if it's still "New Chat"
+     if (threadId) {
+       const thread = threads.find((t: Thread) => t.id === threadId);
+       if (thread && thread.title === 'New Chat') {
+         const title = input.length > 30 ? input.substring(0, 30) + '...' : input;
+         setThreads((prev: Thread[]) => prev.map((t: Thread) =>
+           t.id === threadId ? { ...t, title } : t
+         ));
+       }
+     }
+
+      setInput("");
+      setLoading(true);
+      setStreamingReasoning(null);
+      setStreamingCode(null);
+      setStreamingRequestType(null);
 
        try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 120000);
+          const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout
 
           // Inject project context into system prompt
           const currentContext = getProjectContextString();
@@ -140,56 +321,129 @@ function ChatInterface() {
             }),
             signal: controller.signal
           });
-          
-          // ... (rest of fetch handling)
+          clearTimeout(timeoutId);
+
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+
+          // Get metadata from headers
+          const requestType = res.headers.get('X-Request-Type');
+          const modelId = res.headers.get('X-Model-Id');
+          if (requestType) setStreamingRequestType(requestType);
+
+          const reader = res.body?.getReader();
+          const decoder = new TextDecoder();
+          let fullText = '';
+
+          if (reader) {
+            // Initialize streaming reasoning to empty string to show the UI immediately
+            setStreamingReasoning("");
+            
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              const chunk = decoder.decode(value, { stream: true });
+              fullText += chunk;
+
+              // Heuristic: Find the reasoning field
+              // We look for "reasoning": " and capture everything after it
+              const reasoningStart = fullText.indexOf('"reasoning"');
+              if (reasoningStart !== -1) {
+                const valueStart = fullText.indexOf('"', reasoningStart + 11) + 1; // +11 for "reasoning": length approx
+                if (valueStart > 0) {
+                   // Capture until the next unescaped quote, OR until the end of the string if we are still streaming
+                   // This is a bit tricky with regex on incomplete strings, so we use a safer approach
+                   // We just try to match the content.
+                   const match = fullText.slice(valueStart).match(/^((?:[^"\\]|\\.)*)/);
+                   if (match) {
+                      let text = match[1];
+                      // Unescape basic chars for display
+                      try {
+                        text = text.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                      } catch (e) { /* ignore */ }
+                      setStreamingReasoning(text);
+                   }
+                }
+              }
+
+              // Heuristic: Find the Source code field
+              const sourceStart = fullText.indexOf('"Source"');
+              if (sourceStart !== -1) {
+                const valueStart = fullText.indexOf('"', sourceStart + 8) + 1;
+                if (valueStart > 0) {
+                   const match = fullText.slice(valueStart).match(/^((?:[^"\\]|\\.)*)/);
+                   if (match) {
+                      let text = match[1];
+                      try {
+                         text = text
+                           .replace(/\\n/g, '\n')
+                           .replace(/\\t/g, '\t')
+                           .replace(/\\"/g, '"')
+                           .replace(/\\\\/g, '\\');
+                      } catch (e) { /* ignore */ }
+                      setStreamingCode(text);
+                   }
+                }
+              }
+            }
+          }
 
           // Stream finished, parse full JSON
           let data;
           try {
             const cleaned = cleanJson(fullText);
             data = JSON.parse(cleaned);
-            
             // Update Project Explorer with new assets
             addAssetToTree(data);
           } catch (e) {
-             // ...
+             console.error('Failed to parse final JSON:', e);
+             throw new Error('AI response was not valid JSON');
           }
 
-          // ... (rest of function)
+          if (data?.error) throw new Error(data.error);
+
+          if (data.reasoning) {
+            setStreamingReasoning(data.reasoning);
+          }
+
+          const aiMsg: Message = {
+            role: 'ai',
+            content: data.message,
+            timestamp: Date.now(),
+            reasoning: data.reasoning,
+            data: data,
+            model: modelId || selectedModel,
+            requestType: requestType || data.requestType,
+            tokensUsed: data.tokensUsed, // These might be missing in stream response, handled below
+            tokensPerSecond: 0,
+            duration: 0
+          };
+          setMessages((prev: Message[]) => [...prev, aiMsg]);
+       } catch (e: unknown) {
+         console.error('Send message error:', e);
+         let errorContent = 'An unexpected error occurred';
+         if (e instanceof Error) {
+           if (e.name === 'AbortError') {
+             errorContent = 'Request timed out after 120 seconds. Please try again.';
+           } else {
+             errorContent = e.message;
+           }
+         }
+         const errorMsg: Message = {
+           role: 'error',
+           content: errorContent,
+           timestamp: Date.now()
+         };
+        setMessages((prev: Message[]) => [...prev, errorMsg]);
+      } finally {
+        setLoading(false);
+        setStreamingReasoning(null);
+        setStreamingRequestType(null);
+        setStreamingCode(null);
+      }
     }, [input, loading, currentThreadId, threads, selectedModel, systemPrompt, settings, createNewThread, userId, addAssetToTree, getProjectContextString]);
-
-    // ... (other functions)
-
-   return (
-    <div className={`flex h-screen ${settings.compactMode ? 'compact-mode' : ''}`}>
-      {/* Left Sidebar */}
-      <div className={`w-64 border-r border-border p-4 hidden md:flex flex-col gap-4 sidebar-spacing`}>
-        {/* ... (Sidebar content) ... */}
-      </div>
-
-      {/* Main Chat */}
-      <div className="flex-1 flex flex-col min-w-0">
-          {/* ... (Chat content) ... */}
-      </div>
-
-      {/* Right Sidebar - Project Explorer */}
-      <div className="w-64 border-l border-border hidden lg:flex flex-col bg-card">
-        <ProjectExplorer />
-      </div>
-
-       {previewData && <PreviewModal data={previewData} onClose={() => setPreviewData(null)} />}
-       <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
-    </div>
-  );
-}
-
-export default function Home() {
-  return (
-    <ProjectProvider>
-      <ChatInterface />
-    </ProjectProvider>
-  );
-}
 
   const copyToken = async () => {
     if (pluginToken) {
@@ -252,8 +506,6 @@ export default function Home() {
       mounted = false;
     };
   }, [userId, regenerateToken]);
-
-
 
   if (!session) {
     const handleCustomSignIn = async (e: React.FormEvent) => {
@@ -371,7 +623,7 @@ export default function Home() {
                  setCurrentThreadId(thread.id);
                  setSearchQuery('');
                }}
-                className={`text-secondary text-sm p-3 hover:bg-hover rounded-lg cursor-pointer transition-all ${
+                className={`text-secondary text-sm p-3 hover:bg-hover rounded-lg cursor-pointer transition-all ${ 
                    currentThreadId === thread.id ? 'bg-primary text-foreground border border-primary' : 'hover:bg-hover'
                 }`}
              >
@@ -456,12 +708,12 @@ export default function Home() {
       </div>
 
       {/* Main Chat */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
           {/* Top Bar */}
           <div className="flex items-center justify-end gap-3 p-4 border-b border-border">
             <button
               onClick={() => setShowSystemPrompt(!showSystemPrompt)}
-               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
+               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${ 
                   showSystemPrompt ? 'bg-primary text-foreground' : 'text-secondary hover:text-foreground hover:bg-hover'}`}
            >
              <MessageSquare className="w-4 h-4" />
@@ -590,7 +842,7 @@ export default function Home() {
                 
                 {/* Action Buttons - Roblox Asset Types */}
                 <div className="flex gap-3 flex-wrap justify-center">
-                  {[
+                  {[ 
                     { icon: Code2, label: 'Scripting', prompt: 'Create a script for' },
                     { icon: SparklesIcon, label: 'VFX', prompt: 'Create a VFX effect for' },
                     { icon: Film, label: 'Animation', prompt: 'Create an animation for' },
@@ -614,7 +866,7 @@ export default function Home() {
                      Smart Suggestions
                    </div>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                     {[
+                     {[ 
                        { text: "Script a DataStore leaderboard system", icon: Code2, category: "Systems" },
                        { text: "Create a raycasting gun script", icon: Swords, category: "Combat" },
                        { text: "Make a GUI shop with tweening", icon: ShoppingCart, category: "UI" },
@@ -675,7 +927,7 @@ export default function Home() {
                 <div className="max-w-2xl p-4 rounded-xl bg-card border border-border">
                   {streamingRequestType && (
                     <div className="mb-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${ 
                         streamingRequestType === 'scripting' ? 'bg-blue-500 text-blue-400 border border-blue-800' :
                         streamingRequestType === 'vfx' ? 'bg-purple-500 text-purple-400 border border-purple-800' :
                         streamingRequestType === 'animation' ? 'bg-pink-500 text-pink-400 border border-pink-800' :
@@ -752,14 +1004,14 @@ export default function Home() {
           
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-               <div className={`max-w-2xl p-4 rounded-xl animate-fade-in ${
+               <div className={`max-w-2xl p-4 rounded-xl animate-fade-in ${ 
                   msg.role === 'user' ? 'bg-primary text-foreground' :
                   msg.role === 'error' ? 'bg-error border border-error text-error' : 'bg-card border border-border'
-               }`}>
+               }`}> 
                 {/* Request Type Badge */}
                 {msg.requestType && (
                   <div className="mb-2">
-                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${ 
                        msg.requestType === 'scripting' ? 'bg-blue-500 text-blue-400 border border-blue-800' :
                        msg.requestType === 'vfx' ? 'bg-purple-500 text-purple-400 border border-purple-800' :
                        msg.requestType === 'animation' ? 'bg-pink-500 text-pink-400 border border-pink-800' :
@@ -908,7 +1160,7 @@ export default function Home() {
                                   setSelectedModel(model.id);
                                   setShowModelDropdown(false);
                                 }}
-                                className={`w-full px-3 py-2 text-left text-sm hover:bg-hover flex items-center gap-2 transition-colors ${
+                                className={`w-full px-3 py-2 text-left text-sm hover:bg-hover flex items-center gap-2 transition-colors ${ 
                                   selectedModel === model.id ? 'bg-primary text-foreground' : 'text-foreground'
                                 }`}
                               >
@@ -953,8 +1205,21 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Right Sidebar - Project Explorer */}
+      <div className="w-64 border-l border-border hidden lg:flex flex-col bg-card">
+        <ProjectExplorer />
+      </div>
+
        {previewData && <PreviewModal data={previewData} onClose={() => setPreviewData(null)} />}
        <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <ProjectProvider>
+      <ChatInterface />
+    </ProjectProvider>
   );
 }
