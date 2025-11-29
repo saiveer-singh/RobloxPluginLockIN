@@ -497,16 +497,7 @@ export default function Home() {
     };
   }, [userId, regenerateToken]);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
-  }
+
 
   if (!session) {
     const handleCustomSignIn = async (e: React.FormEvent) => {
