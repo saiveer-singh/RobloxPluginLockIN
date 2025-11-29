@@ -223,12 +223,12 @@ const TreeNode = ({ node, depth = 0 }: { node: ProjectAsset; depth?: number }) =
   return (
     <div className="select-none font-sans">
       <div 
-        className="flex items-center gap-1.5 py-0.5 px-2 hover:bg-[#2a2d2e] cursor-pointer group transition-colors border-l-2 border-transparent hover:border-[#007acc]"
+        className="flex items-center gap-1.5 py-0.5 px-2 hover:bg-[var(--val-hover)] cursor-pointer group transition-colors border-l-2 border-transparent hover:border-[var(--val-primary)]"
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
         onClick={() => hasChildren && setIsOpen(!isOpen)}
       >
         {/* Arrow */}
-        <span className={`text-gray-400 hover:text-white transition-colors flex-shrink-0 ${hasChildren ? '' : 'opacity-0'}`}>
+        <span className={`text-[var(--val-secondary)] hover:text-[var(--val-foreground)] transition-colors flex-shrink-0 ${hasChildren ? '' : 'opacity-0'}`}>
            {isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         </span>
         
@@ -238,7 +238,7 @@ const TreeNode = ({ node, depth = 0 }: { node: ProjectAsset; depth?: number }) =
         </div>
         
         {/* Name */}
-        <span className="text-[#cccccc] text-sm truncate group-hover:text-white">{node.name}</span>
+        <span className="text-[var(--val-foreground)] text-sm truncate">{node.name}</span>
       </div>
       
       {isOpen && hasChildren && (
@@ -263,14 +263,14 @@ export function ProjectExplorer() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#1e1e1e] border-l border-[#3e3e42]">
-      <div className="flex items-center justify-between px-3 py-2 bg-[#252526] border-b border-[#3e3e42]">
-        <span className="text-xs font-bold text-[#cccccc] uppercase tracking-wider">Explorer</span>
+    <div className="flex flex-col h-full bg-[var(--val-background)] border-l border-[var(--val-border)]">
+      <div className="flex items-center justify-between px-3 py-2 bg-[var(--val-card)] border-b border-[var(--val-border)]">
+        <span className="text-xs font-bold text-[var(--val-foreground)] uppercase tracking-wider">Explorer</span>
         <div className="flex items-center gap-1">
           <button 
             onClick={handleSync}
             disabled={isSyncing}
-            className="text-[10px] text-[#858585] hover:text-white px-2 py-0.5 rounded hover:bg-[#3e3e42] transition-colors disabled:opacity-50 flex items-center gap-1"
+            className="text-[10px] text-[var(--val-secondary)] hover:text-[var(--val-foreground)] px-2 py-0.5 rounded hover:bg-[var(--val-hover)] transition-colors disabled:opacity-50 flex items-center gap-1"
             title="Sync from Roblox Studio"
           >
             <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
@@ -279,7 +279,7 @@ export function ProjectExplorer() {
           {projectTree.length > 0 && (
             <button 
               onClick={clearProject}
-              className="text-[10px] text-[#858585] hover:text-white px-2 py-0.5 rounded hover:bg-[#3e3e42] transition-colors"
+              className="text-[10px] text-[var(--val-secondary)] hover:text-[var(--val-foreground)] px-2 py-0.5 rounded hover:bg-[var(--val-hover)] transition-colors"
             >
               Clear
             </button>
@@ -289,10 +289,10 @@ export function ProjectExplorer() {
       <div className="flex-1 overflow-y-auto py-1 custom-scrollbar">
         {projectTree.length === 0 ? (
           <div className="p-4 text-center">
-            <div className="text-[#858585] text-xs italic">
+            <div className="text-[var(--val-secondary)] text-xs italic">
               Empty Project
             </div>
-            <div className="mt-2 text-[10px] text-[#555555]">
+            <div className="mt-2 text-[10px] text-[var(--val-secondary)] opacity-70">
               Generated assets will appear here
             </div>
           </div>
