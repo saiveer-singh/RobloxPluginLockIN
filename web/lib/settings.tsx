@@ -47,6 +47,9 @@ export interface Settings {
   enterToSend: boolean;
   autoFocus: boolean;
   soundEnabled: boolean;
+
+  // Usage Stats
+  totalTokensUsed: number;
 }
 
 const defaultSettings: Settings = {
@@ -65,6 +68,7 @@ const defaultSettings: Settings = {
   enterToSend: true,
   autoFocus: true,
   soundEnabled: false,
+  totalTokensUsed: 0,
 };
 
 const themePresets: Record<ThemePreset, ThemeColors> = {

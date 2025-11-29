@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Settings, X, Monitor, Zap, MessageSquare, RotateCcw, Cpu, Search, Check, ChevronDown, Palette } from 'lucide-react';
+import { Settings, X, Monitor, Zap, MessageSquare, RotateCcw, Cpu, Search, Check, ChevronDown, Palette, BarChart3 } from 'lucide-react';
 import { useSettings, ThemePreset, themePresets, ThemeColors } from '@/lib/settings';
 import { ModelIcon } from './ModelIcon';
 import { ALL_MODELS, getCategories, type ModelInfo } from '@/lib/models';
@@ -13,7 +13,7 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const { settings, updateSettings, resetToDefaults } = useSettings();
-  const [activeTab, setActiveTab] = useState<'behavior' | 'appearance' | 'performance' | 'ai' | 'models'>('behavior');
+  const [activeTab, setActiveTab] = useState<'behavior' | 'appearance' | 'performance' | 'ai' | 'models' | 'usage'>('behavior');
   const [modelSearchQuery, setModelSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   
@@ -80,6 +80,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     { id: 'performance' as const, label: 'Performance', icon: Zap },
     { id: 'ai' as const, label: 'AI', icon: MessageSquare },
     { id: 'models' as const, label: 'Models', icon: Cpu },
+    { id: 'usage' as const, label: 'Usage', icon: BarChart3 },
   ];
 
   return (
@@ -638,6 +639,36 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                       No models found matching &quot;{modelSearchQuery}&quot;
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'usage' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-4">Usage Statistics</h3>
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="p-4 bg-input rounded-lg border border-border">
+                      <div className="text-sm text-secondary mb-1">Total Tokens Used</div>
+                      <div className="text-2xl font-bold text-foreground">
+                        {(settings.totalTokensUsed || 0).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-input rounded-lg border border-border">
+                      <div className="text-sm text-secondary mb-1">Estimated Cost</div>
+                      <div className="text-2xl font-bold text-success">
+                        ${((settings.totalTokensUsed || 0) * 0.000002).toFixed(4)}
+                      </div>
+                      <div className="text-xs text-secondary mt-1">Based on average blended rate</div>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => updateSettings({ totalTokensUsed: 0 })}
+                    className="px-4 py-2 bg-error/10 text-error hover:bg-error/20 rounded-lg text-sm transition-colors"
+                  >
+                    Reset Statistics
+                  </button>
                 </div>
               </div>
             )}

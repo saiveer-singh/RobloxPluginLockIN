@@ -95,7 +95,7 @@ function cleanJson(text: string): string {
 
 function ChatInterface() {
     const { data: session } = useSession();
-    const { settings } = useSettings();
+    const { settings, updateSettings } = useSettings();
     const { addAssetToTree, getProjectContextString } = useProject();
     const [input, setInput] = useState("");
     const [messages, setMessages] = useState<Message[]>([]);
@@ -408,6 +408,11 @@ function ChatInterface() {
             setStreamingReasoning(data.reasoning);
           }
 
+          // Update token usage stats
+          if (data.tokensUsed) {
+             updateSettings({ totalTokensUsed: (settings.totalTokensUsed || 0) + data.tokensUsed });
+          }
+
           const aiMsg: Message = {
             role: 'ai',
             content: data.message,
@@ -443,7 +448,7 @@ function ChatInterface() {
         setStreamingRequestType(null);
         setStreamingCode(null);
       }
-    }, [input, loading, currentThreadId, threads, selectedModel, systemPrompt, settings, createNewThread, userId, addAssetToTree, getProjectContextString]);
+    }, [input, loading, currentThreadId, threads, selectedModel, systemPrompt, settings, createNewThread, userId, addAssetToTree, getProjectContextString, updateSettings]);
 
   const copyToken = async () => {
     if (pluginToken) {
