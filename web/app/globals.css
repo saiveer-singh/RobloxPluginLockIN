@@ -82,6 +82,17 @@ input, textarea, select, button {
   background: var(--color-primary);
 }
 
+/* Fix for Chrome/Safari autofill background color */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--val-input) inset !important;
+  -webkit-text-fill-color: var(--val-foreground) !important;
+  caret-color: var(--val-foreground) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 /* Animation classes */
 .animate-fade-in {
   animation: fadeIn var(--animation-duration) ease-in-out;

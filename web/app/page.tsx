@@ -1181,7 +1181,7 @@ export default function Home() {
                     }
                   }}
                  placeholder="Describe what you want to create in Roblox... (Enter to send, Shift+Enter for new line)"
-                  className="flex-1 bg-transparent py-4 pl-4 pr-20 focus:outline-none text-foreground placeholder-secondary resize-none"
+                  className="flex-1 bg-transparent py-4 pl-4 pr-20 focus:outline-none text-[var(--val-foreground)] placeholder-secondary resize-none"
                />
               <div className="flex items-center gap-2 pr-2">
                 <button 
