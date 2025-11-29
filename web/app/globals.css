@@ -8,10 +8,10 @@
   --val-primary-foreground: #ffffff;
   --val-secondary: #a1a1aa;
   --val-accent: #3b82f6;
-  --val-border: #27272a;
-  --val-card: #09090b;
-  --val-input: #18181b;
-  --val-hover: #27272a;
+  --val-border: #333333;
+  --val-card: #000000;
+  --val-input: #121212;
+  --val-hover: #1a1a1a;
   --val-success: #4ade80;
   --val-error: #f87171;
   --val-warning: #fbbf24;

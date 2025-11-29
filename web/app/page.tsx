@@ -584,7 +584,7 @@ function ChatInterface() {
   }
 
    return (
-    <div className={`flex h-screen ${settings.compactMode ? 'compact-mode' : ''}`}>
+    <div className={`flex h-screen bg-background text-foreground ${settings.compactMode ? 'compact-mode' : ''}`}>
       {/* Sidebar */}
       <div className={`w-64 border-r border-border p-4 hidden md:flex flex-col gap-4 sidebar-spacing`}>
         <div className="flex items-center gap-3 font-bold text-xl text-foreground">
