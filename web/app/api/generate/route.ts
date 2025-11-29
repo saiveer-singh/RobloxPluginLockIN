@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { addToQueue } from '@/lib/store';
-import { MODEL_CONFIGS, generateContent } from '@/lib/ai';
+import { MODEL_CONFIGS, generateContentStream, cleanJson } from '@/lib/ai';
 
 export async function POST(req: Request) {
   try {
@@ -15,22 +15,65 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Unsupported model: ${model}` }, { status: 400 });
     }
 
-    console.log('Starting AI generation...');
-    // Generate actual content
-    const result = await generateContent(prompt, model, systemPrompt);
-    console.log('AI generation completed');
+    console.log('Starting AI generation stream...');
+    const { stream: openAiStream, requestType, modelId } = await generateContentStream(prompt, model, systemPrompt);
 
-    // Add to queue for the plugin to pick up
-    addToQueue(result.content, userId);
+    // Accumulate full content for the plugin queue
+    let fullContent = '';
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
 
-    return NextResponse.json({
-      ...result.content,
-      model: result.model,
-      tokensUsed: result.tokensUsed,
-      tokensPerSecond: result.tokensPerSecond,
-      duration: result.duration,
-      requestType: result.requestType
+    const transformStream = new TransformStream({
+      async transform(chunk, controller) {
+        const text = decoder.decode(chunk);
+        const lines = text.split('\n');
+        
+        for (const line of lines) {
+          if (line.trim() === '' || line.trim() === 'data: [DONE]') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          try {
+            const json = JSON.parse(line.slice(6));
+            const content = json.choices?.[0]?.delta?.content || '';
+            if (content) {
+              fullContent += content;
+              controller.enqueue(encoder.encode(content));
+            }
+          } catch (e) {
+            console.warn('Error parsing stream chunk:', e);
+          }
+        }
+      },
+      async flush(controller) {
+        console.log('Stream complete. Processing full content...');
+        try {
+          const cleanedContent = cleanJson(fullContent);
+          const jsonContent = JSON.parse(cleanedContent);
+          
+          // Add to queue for the plugin to pick up
+          addToQueue(jsonContent, userId);
+          
+          // Send a final metadata event or just close
+          // We can't send JSON here easily if we are streaming raw text. 
+          // The client will handle the parsing of the full text it received.
+        } catch (e) {
+          console.error('Error processing final content:', e);
+          // We can't really report this error to the client since the stream is likely closed or ending
+        }
+      }
     });
+
+    // Pipe the OpenAI stream through our transformer
+    const readable = openAiStream.pipeThrough(transformStream);
+
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Request-Type': requestType,
+        'X-Model-Id': modelId,
+      },
+    });
+
   } catch (e: unknown) {
     console.error('Generate error:', e);
     const errorMessage = e instanceof Error ? e.message : "Internal Server Error";

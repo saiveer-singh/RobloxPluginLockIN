@@ -86,6 +86,18 @@ interface Thread {
   updatedAt: number;
 }
 
+// Helper to clean JSON string
+function cleanJson(text: string): string {
+  if (!text) return text;
+  let cleaned = text.replace(/```json/g, '').replace(/```/g, '');
+  const firstOpen = cleaned.indexOf('{');
+  const lastClose = cleaned.lastIndexOf('}');
+  if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
+    cleaned = cleaned.substring(firstOpen, lastClose + 1);
+  }
+  return cleaned.trim();
+}
+
 export default function Home() {
     const { data: session } = useSession();
     const { settings } = useSettings();
@@ -289,10 +301,11 @@ export default function Home() {
       setLoading(true);
       setStreamingReasoning(null);
       setStreamingCode(null);
+      setStreamingRequestType(null);
 
        try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout for slower models
+          const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout
 
           const res = await fetch('/api/generate', {
             method: 'POST',
@@ -307,70 +320,103 @@ export default function Home() {
           });
           clearTimeout(timeoutId);
 
-       let data;
-       try {
-         data = await res.json();
-       } catch (e) {
-         // If JSON parse fails, check status
-         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-         // If status was ok but JSON failed, rethrow
-         throw e;
-       }
-
-       if (!res.ok) {
-         throw new Error(data?.error || `HTTP ${res.status}: ${res.statusText}`);
-       }
-
-       if (data?.error) throw new Error(data.error);
-
-        // Start streaming the reasoning if enabled
-        if (settings.reasoningEnabled && data.reasoning) {
-          setStreamingRequestType(data.requestType);
-          setStreamingReasoning(data.reasoning);
-          // Wait for typing to complete before showing full message
-          const typingSpeed = settings.typingSpeed === 'fast' ? 10 : settings.typingSpeed === 'slow' ? 30 : 20;
-          await new Promise(resolve => setTimeout(resolve, data.reasoning.length * typingSpeed + 500));
-        }
-
-        // Stream the generated code/assets if any
-        if (data.assets && data.assets.length > 0) {
-          const codeAsset = data.assets.find((asset) => asset.ClassName === 'Script' || asset.ClassName === 'LocalScript' || asset.ClassName === 'ModuleScript');
-          if (codeAsset && codeAsset.Properties.Source) {
-            setStreamingCode('');
-            // Stream the code character by character
-            const code = codeAsset.Properties.Source;
-            const codeTypingSpeed = 5; // Fast typing for code
-            for (let i = 0; i < code.length; i++) {
-              await new Promise(resolve => setTimeout(resolve, codeTypingSpeed));
-              setStreamingCode(code.slice(0, i + 1));
-            }
-            // Wait a bit after code is done
-            await new Promise(resolve => setTimeout(resolve, 1000));
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
           }
-        }
 
-        const aiMsg: Message = {
-          role: 'ai',
-          content: data.message,
-          timestamp: Date.now(),
-          reasoning: data.reasoning,
-          data: data,
-          model: data.model,
-          requestType: data.requestType,
-          tokensUsed: data.tokensUsed,
-          tokensPerSecond: data.tokensPerSecond,
-          duration: data.duration
-        };
-        setMessages((prev: Message[]) => [...prev, aiMsg]);
-        setStreamingReasoning(null);
-        setStreamingRequestType(null);
-        setStreamingCode(null);
+          // Get metadata from headers
+          const requestType = res.headers.get('X-Request-Type');
+          const modelId = res.headers.get('X-Model-Id');
+          if (requestType) setStreamingRequestType(requestType);
+
+          const reader = res.body?.getReader();
+          const decoder = new TextDecoder();
+          let fullText = '';
+
+          if (reader) {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              const chunk = decoder.decode(value, { stream: true });
+              fullText += chunk;
+
+              // Try to extract reasoning on the fly
+              // Look for "reasoning": "..."
+              // We use a simple state machine approach or regex to find the reasoning string
+              // Since JSON can be messy during streaming, we look for the key and then capture until we see a non-escaped quote followed by comma or newline
+              
+              // Heuristic: Find the reasoning field
+              const reasoningMatch = fullText.match(/"reasoning"\s*:\s*"((?:[^"\\]|\\.)*)/);
+              if (reasoningMatch && reasoningMatch[1]) {
+                 // We have a partial or complete reasoning string
+                 // We can just show what we have so far
+                 // JSON strings are escaped, so we might want to unescape basic chars for display
+                 try {
+                   const unescapedReasoning = reasoningMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                   setStreamingReasoning(unescapedReasoning);
+                 } catch (e) {
+                   setStreamingReasoning(reasoningMatch[1]);
+                 }
+              }
+
+              // Heuristic: Find the Source code field (for Scripts)
+              // We look for the "Source" property which contains the Luau code
+              const sourceMatch = fullText.match(/"Source"\s*:\s*"((?:[^"\\]|\\.)*)/);
+              if (sourceMatch && sourceMatch[1]) {
+                try {
+                   // Unescape the string to show actual code newlines and formatting
+                   const unescapedCode = sourceMatch[1]
+                     .replace(/\\n/g, '\n')
+                     .replace(/\\t/g, '\t')
+                     .replace(/\\"/g, '"')
+                     .replace(/\\\\/g, '\\');
+                   setStreamingCode(unescapedCode);
+                } catch (e) {
+                   // Fallback if manual unescape fails
+                   setStreamingCode(sourceMatch[1]);
+                }
+              }
+            }
+          }
+
+          // Stream finished, parse full JSON
+          let data;
+          try {
+            const cleaned = cleanJson(fullText);
+            data = JSON.parse(cleaned);
+          } catch (e) {
+             console.error('Failed to parse final JSON:', e);
+             throw new Error('AI response was not valid JSON');
+          }
+
+          if (data?.error) throw new Error(data.error);
+
+          if (data.reasoning) {
+            setStreamingReasoning(data.reasoning);
+          }
+
+
+
+          const aiMsg: Message = {
+            role: 'ai',
+            content: data.message,
+            timestamp: Date.now(),
+            reasoning: data.reasoning,
+            data: data,
+            model: modelId || selectedModel,
+            requestType: requestType || data.requestType,
+            tokensUsed: data.tokensUsed, // These might be missing in stream response, handled below
+            tokensPerSecond: 0,
+            duration: 0
+          };
+          setMessages((prev: Message[]) => [...prev, aiMsg]);
        } catch (e: unknown) {
          console.error('Send message error:', e);
          let errorContent = 'An unexpected error occurred';
          if (e instanceof Error) {
            if (e.name === 'AbortError') {
-             errorContent = 'Request timed out after 15 seconds. Please try again.';
+             errorContent = 'Request timed out after 120 seconds. Please try again.';
            } else {
              errorContent = e.message;
            }
@@ -381,11 +427,11 @@ export default function Home() {
            timestamp: Date.now()
          };
         setMessages((prev: Message[]) => [...prev, errorMsg]);
+      } finally {
+        setLoading(false);
         setStreamingReasoning(null);
         setStreamingRequestType(null);
         setStreamingCode(null);
-      } finally {
-        setLoading(false);
       }
     }, [input, loading, currentThreadId, threads, selectedModel, systemPrompt, settings, createNewThread, userId]);
 
@@ -902,8 +948,9 @@ export default function Home() {
                       <Brain className="w-4 h-4 text-primary animate-pulse" />
                        <span className="text-xs font-bold text-primary uppercase">AI Reasoning</span>
                     </div>
-                     <p className="text-sm text-primary leading-relaxed">
-                      <TypingText text={streamingReasoning} speed={15} />
+                     <p className="text-sm text-primary leading-relaxed whitespace-pre-wrap">
+                      {streamingReasoning}
+                      <span className="animate-pulse">|</span>
                     </p>
                   </div>
                   <div className="space-y-2">

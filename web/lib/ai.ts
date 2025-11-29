@@ -723,3 +723,77 @@ export async function generateContent(prompt: string, model: string, systemPromp
     requestType,
   };
 }
+
+export async function generateContentStream(
+  prompt: string,
+  model: string,
+  systemPrompt?: string
+): Promise<{ stream: ReadableStream<Uint8Array>; requestType: string; provider: string; modelId: string }> {
+  const requestType = detectRequestType(prompt);
+
+  let fullSystemPrompt = '';
+  switch (requestType) {
+    case 'scripting':
+      fullSystemPrompt = SCRIPTING_PROMPT;
+      break;
+    case 'vfx':
+      fullSystemPrompt = VFX_PROMPT;
+      break;
+    case 'animation':
+      fullSystemPrompt = ANIMATION_PROMPT;
+      break;
+    case 'modeling':
+      fullSystemPrompt = MODELING_PROMPT;
+      break;
+  }
+
+  if (systemPrompt) {
+    fullSystemPrompt += '\n\n' + systemPrompt;
+  }
+
+  const config = MODEL_CONFIGS[model as keyof typeof MODEL_CONFIGS];
+  if (!config) {
+    throw new Error(`Unsupported model: ${model}`);
+  }
+
+  const currentApiKeys = getApiKeys();
+  const apiKey = config.provider === 'openrouter' ? currentApiKeys.OPENROUTER_API_KEY : currentApiKeys.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error(`API key not found for provider: ${config.provider}`);
+  }
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://opencode.ai',
+      'X-Title': 'Roblox Plugin',
+    },
+    body: JSON.stringify({
+      model: config.modelId,
+      messages: [
+        { role: 'system', content: fullSystemPrompt },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 4000,
+      temperature: 0.7,
+      stream: true,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenRouter API Error: ${response.statusText}`);
+  }
+
+  if (!response.body) {
+    throw new Error('No response body from OpenRouter');
+  }
+
+  return { 
+    stream: response.body, 
+    requestType,
+    provider: config.provider,
+    modelId: config.modelId
+  };
+}
