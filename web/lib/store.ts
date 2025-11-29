@@ -3,11 +3,13 @@ declare global {
   var commandQueues: Record<string, unknown[]>;
   var pluginStatuses: Record<string, { connected: boolean; lastSeen: number }>;
   var userTokens: Record<string, string>; // token -> userId
+  var projectStates: Record<string, any>; // userId -> project tree
 }
 
 if (!globalThis.commandQueues) globalThis.commandQueues = {};
 if (!globalThis.pluginStatuses) globalThis.pluginStatuses = {};
 if (!globalThis.userTokens) globalThis.userTokens = {};
+if (!globalThis.projectStates) globalThis.projectStates = {};
 
 export const getQueue = (userId: string) => {
   if (!globalThis.commandQueues[userId]) globalThis.commandQueues[userId] = [];
@@ -52,5 +54,13 @@ export const getUserIdFromToken = (token: string) => {
 
 export const revokeToken = (token: string) => {
   delete globalThis.userTokens[token];
+};
+
+export const updateProjectState = (userId: string, state: any) => {
+  globalThis.projectStates[userId] = state;
+};
+
+export const getProjectState = (userId: string) => {
+  return globalThis.projectStates[userId] || null;
 };
 

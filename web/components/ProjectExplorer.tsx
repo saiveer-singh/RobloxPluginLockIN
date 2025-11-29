@@ -3,9 +3,12 @@ import {
   Folder, File, ChevronRight, ChevronDown, Box, Code, Zap, Image as ImageIcon, 
   Type, Globe, Users, Sun, Database, Server, HardDrive, LayoutTemplate, 
   Briefcase, User, Flag, Music, MessageSquare, Boxes, FileCode, Radio, Link, 
-  Monitor, Square, Scroll, Lightbulb, Sparkles, Activity, Layers, ArrowDownToLine
+  Monitor, Square, Scroll, Lightbulb, Sparkles, Activity, Layers, ArrowDownToLine,
+  RefreshCw
 } from 'lucide-react';
 import { useProject, ProjectAsset } from '@/lib/project-context';
+
+// ... (AssetIcon and TreeNode components remain unchanged)
 
 // Asset Icon Component - Mimics Roblox Studio Icons using Lucide
 const AssetIcon = ({ className }: { className: string }) => {
@@ -91,20 +94,38 @@ const TreeNode = ({ node, depth = 0 }: { node: ProjectAsset; depth?: number }) =
 };
 
 export function ProjectExplorer() {
-  const { projectTree, clearProject } = useProject();
+  const { projectTree, clearProject, syncFromStudio } = useProject();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    await syncFromStudio();
+    setTimeout(() => setIsSyncing(false), 500);
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e] border-l border-[#333]">
       <div className="flex items-center justify-between px-3 py-2 bg-[#252526] border-b border-[#333]">
         <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Explorer</span>
-        {projectTree.length > 0 && (
+        <div className="flex items-center gap-1">
           <button 
-            onClick={clearProject}
-            className="text-[10px] text-gray-500 hover:text-white px-2 py-0.5 rounded hover:bg-white/10 transition-colors"
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="text-[10px] text-gray-400 hover:text-white px-2 py-0.5 rounded hover:bg-white/10 transition-colors disabled:opacity-50 flex items-center gap-1"
+            title="Sync from Roblox Studio"
           >
-            Clear
+            <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+            Sync
           </button>
-        )}
+          {projectTree.length > 0 && (
+            <button 
+              onClick={clearProject}
+              className="text-[10px] text-gray-500 hover:text-white px-2 py-0.5 rounded hover:bg-white/10 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto py-1 custom-scrollbar">
         {projectTree.length === 0 ? (

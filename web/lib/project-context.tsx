@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { useSession } from 'next-auth/react';
 
 // Simple asset type for the explorer
 export interface ProjectAsset {
@@ -16,9 +17,12 @@ interface ProjectContextType {
   addAssetToTree: (assetData: any) => void;
   clearProject: () => void;
   getProjectContextString: () => string;
+  syncFromStudio: () => Promise<void>;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+
+// ... (DEFAULT_SERVICES constant remains same)
 
 const DEFAULT_SERVICES: ProjectAsset[] = [
   { id: 'workspace', name: 'Workspace', className: 'Workspace', children: [] },
@@ -103,6 +107,7 @@ function mergeAssets(existing: ProjectAsset[], incoming: ProjectAsset[]) {
 }
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
+  const { data: session } = useSession();
   const [projectTree, setProjectTree] = useState<ProjectAsset[]>(DEFAULT_SERVICES);
 
   const addAssetToTree = useCallback((assetData: any) => {
@@ -146,6 +151,23 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     setProjectTree(DEFAULT_SERVICES);
   }, []);
 
+  const syncFromStudio = useCallback(async () => {
+    if (!session?.user?.robloxId) return;
+    try {
+      const res = await fetch(`/api/project-state?userId=${session.user.robloxId}`);
+      const data = await res.json();
+      if (data.tree) {
+        // Assuming data.tree matches ProjectAsset[] structure or needs simple conversion
+        // Ideally the plugin sends exactly what we need, or we map it here.
+        // For now, let's assume the plugin sends a compatible structure or we replace the whole tree.
+        // To be safe, we might want to validate/merge, but replacing is "Sync".
+        setProjectTree(data.tree);
+      }
+    } catch (e) {
+      console.error("Failed to sync from studio:", e);
+    }
+  }, [session?.user?.robloxId]);
+
   // Recursively build a text representation of the tree for the AI context
   const buildContextString = (nodes: ProjectAsset[], depth: number = 0): string => {
     let result = "";
@@ -183,16 +205,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, [projectTree]);
 
   return (
-    <ProjectContext.Provider value={{ projectTree, addAssetToTree, clearProject, getProjectContextString }}>
+    <ProjectContext.Provider value={{ projectTree, addAssetToTree, clearProject, getProjectContextString, syncFromStudio }}>
       {children}
     </ProjectContext.Provider>
   );
-}
-
-export function useProject() {
-  const context = useContext(ProjectContext);
-  if (context === undefined) {
-    throw new Error('useProject must be used within a ProjectProvider');
-  }
-  return context;
 }
