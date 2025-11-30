@@ -34,6 +34,7 @@ interface Message {
   timestamp?: number;
   reasoning?: string;
   plan?: string[];
+  isPlanProposal?: boolean; // New flag
   data?: unknown;
   model?: string;
   requestType?: string;
@@ -236,8 +237,14 @@ function ChatInterface() {
      setInput("");
    }, []);
 
-   const sendMessage = useCallback(async () => {
-     if (!input.trim() || loading) return;
+   const handleApprovePlan = useCallback((plan: string[], originalRequest: string) => {
+      const executionPrompt = `PLAN APPROVED. EXECUTE THE FOLLOWING STEPS:\n${plan.join('\n')}\n\nORIGINAL REQUEST: ${originalRequest}`;
+      sendMessage(executionPrompt, 'execution');
+   }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
+
+   const sendMessage = useCallback(async (text?: string, mode: 'planning' | 'execution' = 'planning') => {
+     const promptText = text || input.trim();
+     if (!promptText || loading) return;
 
      // Create new thread if none exists
      if (!currentThreadId) {
@@ -247,7 +254,7 @@ function ChatInterface() {
 
      const userMsg: Message = {
        role: 'user',
-       content: input.trim(),
+       content: promptText,
        timestamp: Date.now()
      };
      const threadId = currentThreadId || threads[0]?.id;
@@ -258,14 +265,14 @@ function ChatInterface() {
      if (threadId) {
        const thread = threads.find((t: Thread) => t.id === threadId);
        if (thread && thread.title === 'New Chat') {
-         const title = input.length > 30 ? input.substring(0, 30) + '...' : input;
+         const title = promptText.length > 30 ? promptText.substring(0, 30) + '...' : promptText;
          setThreads((prev: Thread[]) => prev.map((t: Thread) =>
            t.id === threadId ? { ...t, title } : t
          ));
        }
      }
 
-      setInput("");
+      if (!text) setInput(""); // Only clear input if using input field
       setLoading(true);
       setStreamingReasoning(null);
       setStreamingCode(null);
@@ -286,7 +293,8 @@ function ChatInterface() {
               prompt: userMsg.content,
               model: selectedModel,
               systemPrompt: effectiveSystemPrompt,
-              userId
+              userId,
+              mode
             }),
             signal: controller.signal
           });
@@ -388,6 +396,7 @@ function ChatInterface() {
             timestamp: Date.now(),
             reasoning: data.reasoning,
             plan: data.plan,
+            isPlanProposal: mode === 'planning',
             data: data,
             model: modelId || selectedModel,
             requestType: requestType || data.requestType,
@@ -977,6 +986,23 @@ function ChatInterface() {
                         </div>
                       ))}
                     </div>
+                    
+                    {msg.isPlanProposal && (
+                      <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
+                        <button
+                          onClick={() => {
+                             // Find the previous user message for context
+                             const prevUserMsg = messages[i-1];
+                             const originalReq = prevUserMsg ? prevUserMsg.content : "Unknown Request";
+                             handleApprovePlan(msg.plan!, originalReq);
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-bold transition-colors"
+                        >
+                          <Check className="w-3 h-3" />
+                          APPROVE & EXECUTE
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
                 

@@ -4,8 +4,8 @@ import { MODEL_CONFIGS, generateContentStream, cleanJson } from '@/lib/ai';
 
 export async function POST(req: Request) {
   try {
-    const { prompt, model = 'x-ai-grok-4.1-fast-free', systemPrompt, userId } = await req.json();
-    console.log('Generate request:', { prompt: prompt.substring(0, 100), model, userId });
+    const { prompt, model = 'x-ai-grok-4.1-fast-free', systemPrompt, userId, mode = 'execution' } = await req.json();
+    console.log('Generate request:', { prompt: prompt.substring(0, 100), model, userId, mode });
 
     if (!prompt) return NextResponse.json({ error: "No prompt provided" }, { status: 400 });
     if (!userId) return NextResponse.json({ error: "No userId provided" }, { status: 400 });
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     }
 
     console.log('Starting AI generation stream...');
-    const { stream: openAiStream, requestType, modelId } = await generateContentStream(prompt, model, systemPrompt);
+    const { stream: openAiStream, requestType, modelId } = await generateContentStream(prompt, model, systemPrompt, mode as 'planning' | 'execution');
 
     // Accumulate full content for the plugin queue
     let fullContent = '';
@@ -72,8 +72,10 @@ export async function POST(req: Request) {
           const cleanedContent = cleanJson(fullContent);
           const jsonContent = JSON.parse(cleanedContent);
           
-          // Add to queue for the plugin to pick up
-          addToQueue(jsonContent, userId);
+          // Add to queue for the plugin to pick up ONLY if executing
+          if (mode === 'execution') {
+            addToQueue(jsonContent, userId);
+          }
           
         } catch (e) {
           console.error('Error processing final content:', e);
