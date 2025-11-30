@@ -27,38 +27,6 @@ declare module "next-auth" {
   }
 }
 
-// Typing effect component
-function TypingText({ text, speed = 20 }: { text: string; speed?: number }) {
-  const [displayedText, setDisplayedText] = useState('');
-  const [isComplete, setIsComplete] = useState(false);
-
-  useEffect(() => {
-    if (!text) return;
-    setDisplayedText('');
-    setIsComplete(false);
-    let currentIndex = 0;
-
-    const interval = setInterval(() => {
-      if (currentIndex < text.length) {
-        setDisplayedText(text.slice(0, currentIndex + 1));
-        currentIndex++;
-      } else {
-        setIsComplete(true);
-        clearInterval(interval);
-      }
-    }, speed);
-
-    return () => clearInterval(interval);
-  }, [text, speed]);
-
-  return (
-    <span>
-      {displayedText}
-      {!isComplete && <span className="animate-pulse">|</span>}
-    </span>
-  );
-}
-
 // Message and thread types
 interface Message {
   role: 'user' | 'ai' | 'error';
@@ -926,7 +894,7 @@ function ChatInterface() {
                      <div className="mb-4 pl-4 border-l-2 border-primary/30">
                         <div className="flex items-center gap-2 mb-1 opacity-70">
                           <Brain className="w-3 h-3 text-primary animate-pulse" />
-                           <span className="text-xs font-medium text-primary">Thinking...</span>
+                           <span className="text-xs font-medium text-primary">Reasoning</span>
                         </div>
                          <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
                           {streamingReasoning}
