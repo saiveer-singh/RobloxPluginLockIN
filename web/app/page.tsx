@@ -4,7 +4,7 @@ import { useSession, signIn, signOut } from 'next-auth/react';
 import { useSettings } from '@/lib/settings';
 import type { ModelProvider } from '@/lib/ai';
 import type { ModelInfo } from '@/lib/models';
-import { LogIn, LogOut, Search, Menu, MessageSquare, Settings, User, Copy, RefreshCw, Send, Loader2, Brain, Code2, SparklesIcon, Film, Boxes, Lightbulb, ShoppingCart, ZapIcon, Dog, MessageCircle, Mountain, CircleDot, Swords, Sun, Check, ChevronDown, Code } from 'lucide-react';
+import { LogIn, LogOut, Search, Menu, MessageSquare, Settings, User, Copy, RefreshCw, Send, Loader2, Brain, Code2, SparklesIcon, Film, Boxes, Lightbulb, ShoppingCart, ZapIcon, Dog, MessageCircle, Mountain, CircleDot, Swords, Sun, Check, ChevronDown, Code, ListChecks } from 'lucide-react';
 import { PreviewModal } from '@/components/PreviewModal';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ModelIcon } from '@/components/ModelIcon';
@@ -33,6 +33,7 @@ interface Message {
   content: string;
   timestamp?: number;
   reasoning?: string;
+  plan?: string[];
   data?: unknown;
   model?: string;
   requestType?: string;
@@ -386,6 +387,7 @@ function ChatInterface() {
             content: data.message,
             timestamp: Date.now(),
             reasoning: data.reasoning,
+            plan: data.plan,
             data: data,
             model: modelId || selectedModel,
             requestType: requestType || data.requestType,
@@ -955,6 +957,26 @@ function ChatInterface() {
                        {' '}
                        {msg.requestType.charAt(0).toUpperCase() + msg.requestType.slice(1)} Mode
                      </span>
+                  </div>
+                )}
+
+                {/* Plan Display */}
+                {msg.plan && msg.plan.length > 0 && (
+                  <div className="mb-4 bg-black/20 rounded-lg p-3 border border-white/10">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ListChecks className="w-4 h-4 text-primary" />
+                      <span className="text-xs font-bold text-primary uppercase">Implementation Plan</span>
+                    </div>
+                    <div className="space-y-2">
+                      {msg.plan.map((step: string, idx: number) => (
+                        <div key={idx} className="flex items-start gap-3 text-sm text-gray-300">
+                          <div className="mt-0.5 w-4 h-4 rounded-full border border-primary/50 flex items-center justify-center bg-primary/20 text-primary text-[10px] flex-shrink-0">
+                            ✓
+                          </div>
+                          <span className="leading-tight">{step}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 

@@ -39,13 +39,18 @@ function getApiKeys(): Record<string, string | undefined> {
 const BASE_SCHEMA = `
 CRITICAL: Output MUST be strict JSON matching this exact schema (no markdown, no code blocks, pure JSON only):
 {
-  "reasoning": "Comprehensive step-by-step analysis including: 1) Problem understanding and requirements analysis, 2) Technical approach selection with justification, 3) Architecture design and component relationships, 4) Implementation strategy and best practices, 5) Performance considerations and optimization choices, 6) Error handling and edge case coverage, 7) Future extensibility and maintenance considerations",
-  "message": "Concise description of what was created and its key features",
+  "reasoning": "High-level thought process...",
+  "plan": [
+    "Step 1: Detailed description of task...",
+    "Step 2: ...",
+    ...
+  ],
+  "message": "Concise description of what was created...",
   "assets": [
     {
-      "ClassName": "String (e.g. Part, Frame, Script, ParticleEmitter)",
+      "ClassName": "String",
       "Properties": { "PropertyName": "Value" },
-      "Children": [ ...recursive assets... ]
+      "Children": [ ... ]
     }
   ]
 }
@@ -93,6 +98,8 @@ ADVANCED EXPERTISE AREAS:
 - Advanced physics simulation, raycasting, and spatial optimization
 - Sophisticated networking with data synchronization and conflict resolution
 - Production debugging, logging, and monitoring systems
+
+PLANNING REQUIREMENT: You MUST provide a detailed, step-by-step implementation plan in the "plan" array. This helps the user understand your approach.
 
 COMPREHENSIVE REQUIREMENTS:
 1. ARCHITECTURE: Design modular, scalable systems with clear separation of concerns
