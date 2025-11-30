@@ -36,6 +36,27 @@ function getApiKeys(): Record<string, string | undefined> {
   return keys;
 }
 
+const PLANNING_PROMPT = `
+You are a Technical Architect for Roblox game development. Your goal is to analyze the user's request and create a detailed, step-by-step execution plan.
+
+CRITICAL: Output MUST be strict JSON matching this exact schema:
+{
+  "plan": [
+    "Step 1: Description of first action",
+    "Step 2: Description of second action",
+    ...
+  ],
+  "message": "A brief summary of the proposed plan."
+}
+
+DO NOT generate code, assets, or scripts yet. Focus ONLY on the plan.
+Break down complex tasks into logical, manageable steps that a developer would follow.
+Consider:
+- Architecture and file structure
+- Dependencies between components
+- Configuration and properties
+`;
+
 const BASE_SCHEMA = `
 CRITICAL: Output MUST be strict JSON matching this exact schema (no markdown, no code blocks, pure JSON only):
 {
@@ -765,24 +786,30 @@ export async function generateContent(prompt: string, model: string, systemPromp
 export async function generateContentStream(
   prompt: string,
   model: string,
-  systemPrompt?: string
+  systemPrompt?: string,
+  mode: 'planning' | 'execution' = 'execution'
 ): Promise<{ stream: ReadableStream<Uint8Array>; requestType: string; provider: string; modelId: string }> {
   const requestType = detectRequestType(prompt);
 
   let fullSystemPrompt = '';
-  switch (requestType) {
-    case 'scripting':
-      fullSystemPrompt = SCRIPTING_PROMPT;
-      break;
-    case 'vfx':
-      fullSystemPrompt = VFX_PROMPT;
-      break;
-    case 'animation':
-      fullSystemPrompt = ANIMATION_PROMPT;
-      break;
-    case 'modeling':
-      fullSystemPrompt = MODELING_PROMPT;
-      break;
+  
+  if (mode === 'planning') {
+    fullSystemPrompt = PLANNING_PROMPT;
+  } else {
+    switch (requestType) {
+      case 'scripting':
+        fullSystemPrompt = SCRIPTING_PROMPT;
+        break;
+      case 'vfx':
+        fullSystemPrompt = VFX_PROMPT;
+        break;
+      case 'animation':
+        fullSystemPrompt = ANIMATION_PROMPT;
+        break;
+      case 'modeling':
+        fullSystemPrompt = MODELING_PROMPT;
+        break;
+    }
   }
 
   if (systemPrompt) {
