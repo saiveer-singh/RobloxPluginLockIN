@@ -2,9 +2,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useSettings } from '@/lib/settings';
-import type { ModelProvider } from '@/lib/ai';
-import type { ModelInfo } from '@/lib/models';
-import { LogIn, LogOut, Search, Menu, MessageSquare, Settings, User, Copy, RefreshCw, Send, Loader2, Brain, Code2, SparklesIcon, Film, Boxes, Lightbulb, ShoppingCart, ZapIcon, Dog, MessageCircle, Mountain, CircleDot, Swords, Sun, Check, ChevronDown, Code, ListChecks } from 'lucide-react';
+import type { ModelProvider, ModelInfo } from '@/lib/models';
+import { MODEL_CONFIGS, ALL_MODELS } from '@/lib/models';
+import { LogIn, LogOut, Search, Menu, MessageSquare, Settings, User, Copy, RefreshCw, Send, Loader2, Bot, Code2, Sparkles, Film, Boxes, Lightbulb, ShoppingBag, Target, Trophy, Zap, ChevronDown, Code, Check, Folder, Key, Coins } from 'lucide-react';
 import { PreviewModal } from '@/components/PreviewModal';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ModelIcon } from '@/components/ModelIcon';
@@ -33,8 +33,6 @@ interface Message {
   content: string;
   timestamp?: number;
   reasoning?: string;
-  plan?: string[];
-  isPlanProposal?: boolean; // New flag
   data?: unknown;
   model?: string;
   requestType?: string;
@@ -77,29 +75,22 @@ function ChatInterface() {
     const [showModelDropdown, setShowModelDropdown] = useState(false);
     const [threads, setThreads] = useState<Thread[]>([]);
     const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
-    const [selectedModel, setSelectedModel] = useState<ModelProvider>('openai/gpt-4o' as ModelProvider);
-    const [streamingReasoning, setStreamingReasoning] = useState<string | null>(null);
-    const [streamingRequestType, setStreamingRequestType] = useState<string | null>(null);
-    const [streamingCode, setStreamingCode] = useState<string | null>(null);
-    const [previewData, setPreviewData] = useState<unknown>(null);
+    const [selectedModel, setSelectedModel] = useState<ModelProvider>('grok-code' as ModelProvider);
+     const [streamingReasoning, setStreamingReasoning] = useState<string | null>(null);
+    const [previewData, setPreviewData] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [currentModel, setCurrentModel] = useState<ModelInfo | null>(null);
     const [username, setUsername] = useState("");
+    const [showProjectOrg, setShowProjectOrg] = useState(false);
+    const [coinBalance, setCoinBalance] = useState<number>(0);
+    const [loadingCoins, setLoadingCoins] = useState(false);
 
 
     // Extract userId from session (can be undefined initially)
     const userId = session?.user?.robloxId || undefined;
 
     // Models list
-    const models = useMemo(() => [
-      { id: 'x-ai-grok-4.1-fast-free' as ModelProvider, name: 'Grok 4.1 Fast Free', category: 'Grok' },
-      { id: 'z-ai-glm-4.5-air-free' as ModelProvider, name: 'GLM 4.5 Air Free', category: 'GLM' },
-      { id: 'moonshotai-kimi-k2-free' as ModelProvider, name: 'Kimi K2 Free', category: 'Moonshot' },
-      { id: 'qwen-qwen3-coder-free' as ModelProvider, name: 'Qwen 3 Coder Free', category: 'Qwen' },
-      { id: 'gpt-5-nano' as ModelProvider, name: 'GPT 5 Nano', category: 'OpenCode' },
-      { id: 'grok-code' as ModelProvider, name: 'Grok Code Fast 1', category: 'OpenCode' },
-      { id: 'big-pickle' as ModelProvider, name: 'Big Pickle', category: 'OpenCode' }
-    ], []);
+    const models = useMemo(() => ALL_MODELS, []);
 
     // Load system prompt from localStorage on mount
     useEffect(() => {
@@ -116,7 +107,7 @@ function ChatInterface() {
 
     // Set default model
     useEffect(() => {
-      setSelectedModel('x-ai-grok-4.1-fast-free' as ModelProvider);
+      setSelectedModel('grok-code' as ModelProvider);
     }, []);
 
     // Set currentModel when selectedModel changes
@@ -144,7 +135,7 @@ function ChatInterface() {
      // Ensure selectedModel is valid, fallback to first available model or default
     useEffect(() => {
       if (!selectedModel || !models.find(m => m.id === selectedModel)) {
-        const defaultModelId = models.find(m => m.id === 'x-ai-grok-4.1-fast-free')?.id || models[0]?.id;
+        const defaultModelId = models.find(m => m.id === 'grok-code')?.id || models[0]?.id;
         if (defaultModelId) {
           setSelectedModel(defaultModelId as ModelProvider);
         }
@@ -215,12 +206,12 @@ function ChatInterface() {
      }
    }, [messages, currentThreadId]);
 
-    // Auto-scroll to bottom when new messages arrive (if enabled)
-    useEffect(() => {
-      if (settings.autoScroll && scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }
-    }, [messages, streamingReasoning, streamingRequestType, streamingCode, settings.autoScroll]);
+     // Auto-scroll to bottom when new messages arrive (if enabled)
+     useEffect(() => {
+       if (settings.autoScroll && scrollRef.current) {
+         scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+       }
+     }, [messages, streamingReasoning, settings.autoScroll]);
 
    const createNewThread = useCallback(() => {
      const newThreadId = Date.now().toString();
@@ -237,12 +228,7 @@ function ChatInterface() {
      setInput("");
    }, []);
 
-   const handleApprovePlan = useCallback((plan: string[], originalRequest: string) => {
-      const executionPrompt = `PLAN APPROVED. EXECUTE THE FOLLOWING STEPS:\n${plan.join('\n')}\n\nORIGINAL REQUEST: ${originalRequest}`;
-      sendMessage(executionPrompt, 'execution');
-   }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
-
-   const sendMessage = useCallback(async (text?: string, mode: 'planning' | 'execution' = 'planning') => {
+   const sendMessage = useCallback(async (text?: string) => {
      const promptText = text || input.trim();
      if (!promptText || loading) return;
 
@@ -273,10 +259,8 @@ function ChatInterface() {
      }
 
       if (!text) setInput(""); // Only clear input if using input field
-      setLoading(true);
-      setStreamingReasoning(null);
-      setStreamingCode(null);
-      setStreamingRequestType(null);
+       setLoading(true);
+       setStreamingReasoning(null);
 
        try {
           const controller = new AbortController();
@@ -293,8 +277,7 @@ function ChatInterface() {
               prompt: userMsg.content,
               model: selectedModel,
               systemPrompt: effectiveSystemPrompt,
-              userId,
-              mode
+              userId
             }),
             signal: controller.signal
           });
@@ -304,79 +287,76 @@ function ChatInterface() {
             throw new Error(`HTTP ${res.status}: ${res.statusText}`);
           }
 
-          // Get metadata from headers
-          const requestType = res.headers.get('X-Request-Type');
-          const modelId = res.headers.get('X-Model-Id');
-          if (requestType) setStreamingRequestType(requestType);
+           // Get metadata from headers
+           const requestType = res.headers.get('X-Request-Type');
+           const modelId = res.headers.get('X-Model-Id');
 
-          const reader = res.body?.getReader();
-          const decoder = new TextDecoder();
-          let fullText = '';
+           const reader = res.body?.getReader();
+           const decoder = new TextDecoder();
+           let fullText = '';
+           let chunkCount = 0;
 
-          if (reader) {
-            // Initialize streaming reasoning to empty string to show the UI immediately
-            setStreamingReasoning("");
-            
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
+           if (reader) {
+             // Show loading state while streaming
+             setStreamingReasoning("Generating response...");
 
-              const chunk = decoder.decode(value, { stream: true });
-              fullText += chunk;
+             while (true) {
+               const { done, value } = await reader.read();
+               if (done) break;
 
-              // Heuristic: Find the reasoning field
-              // We look for "reasoning": " and capture everything after it
-              const reasoningStart = fullText.indexOf('"reasoning"');
-              if (reasoningStart !== -1) {
-                const valueStart = fullText.indexOf('"', reasoningStart + 11) + 1; // +11 for "reasoning": length approx
-                if (valueStart > 0) {
-                   // Capture until the next unescaped quote, OR until the end of the string if we are still streaming
-                   // This is a bit tricky with regex on incomplete strings, so we use a safer approach
-                   // We just try to match the content.
-                   const match = fullText.slice(valueStart).match(/^((?:[^"\\]|\\.)*)/);
-                   if (match) {
-                      let text = match[1];
-                      // Unescape basic chars for display
-                      try {
-                        text = text.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-                      } catch (e) { /* ignore */ }
-                      setStreamingReasoning(text);
-                   }
-                }
+               const chunk = decoder.decode(value, { stream: true });
+               fullText += chunk;
+               chunkCount++;
+
+               if (chunkCount % 10 === 0) {
+                 console.log(`Received ${chunkCount} chunks, total length: ${fullText.length}`);
+               }
+             }
+
+             console.log(`Stream complete. Total chunks: ${chunkCount}, final text length: ${fullText.length}`);
+             console.log('Final response preview:', fullText.substring(0, 200));
+           }
+
+            // Stream finished, parse full JSON
+            console.log('Stream finished, checking response...');
+            console.log('Response length:', fullText.length);
+            console.log('Response preview:', fullText.substring(0, 200));
+
+            if (!fullText.trim()) {
+              // Get the correct provider from MODEL_CONFIGS
+              const config = MODEL_CONFIGS[selectedModel as keyof typeof MODEL_CONFIGS];
+              const provider = config?.provider || 'unknown';
+
+              let suggestion = '';
+              if (provider === 'openrouter') {
+                suggestion = ' Try switching to an OpenCode model like "Grok Code Fast 1".';
+              } else {
+                suggestion = ' Try switching to an OpenRouter model.';
               }
 
-              // Heuristic: Find the Source code field
-              const sourceStart = fullText.indexOf('"Source"');
-              if (sourceStart !== -1) {
-                const valueStart = fullText.indexOf('"', sourceStart + 8) + 1;
-                if (valueStart > 0) {
-                   const match = fullText.slice(valueStart).match(/^((?:[^"\\]|\\.)*)/);
-                   if (match) {
-                      let text = match[1];
-                      try {
-                         text = text
-                           .replace(/\\n/g, '\n')
-                           .replace(/\\t/g, '\t')
-                           .replace(/\\"/g, '"')
-                           .replace(/\\\\/g, '\\');
-                      } catch (e) { /* ignore */ }
-                      setStreamingCode(text);
-                   }
-                }
-              }
+              const errorMsg = `AI response was empty. Model: ${selectedModel}, Provider: ${provider}. Please check your API key and model configuration.${suggestion}`;
+              console.error(errorMsg);
+              throw new Error(errorMsg);
             }
-          }
 
-          // Stream finished, parse full JSON
-          let data;
-          try {
-            const cleaned = cleanJson(fullText);
-            data = JSON.parse(cleaned);
+           let data;
+           try {
+             const cleaned = cleanJson(fullText);
+             console.log('Attempting to parse cleaned JSON:', cleaned.substring(0, 200));
+             data = JSON.parse(cleaned);
             // Update Project Explorer with new assets
             addAssetToTree(data);
           } catch (e) {
              console.error('Failed to parse final JSON:', e);
-             throw new Error('AI response was not valid JSON');
+             console.error('Raw response:', fullText.substring(0, 500));
+             console.error('Cleaned response:', cleanJson(fullText).substring(0, 500));
+             
+             // Create error message with details
+             const errorDetails = fullText.length > 200 
+               ? `Response preview: ${fullText.substring(0, 200)}...` 
+               : `Full response: ${fullText}`;
+             
+             throw new Error(`AI response was not valid JSON. ${errorDetails}\n\nError: ${(e as Error).message}`);
           }
 
           if (data?.error) throw new Error(data.error);
@@ -385,26 +365,42 @@ function ChatInterface() {
             setStreamingReasoning(data.reasoning);
           }
 
-          // Update token usage stats
-          if (data.tokensUsed) {
-             updateSettings({ totalTokensUsed: (settings.totalTokensUsed || 0) + data.tokensUsed });
-          }
-
           const aiMsg: Message = {
             role: 'ai',
             content: data.message,
             timestamp: Date.now(),
             reasoning: data.reasoning,
-            plan: data.plan,
-            isPlanProposal: mode === 'planning',
             data: data,
             model: modelId || selectedModel,
             requestType: requestType || data.requestType,
-            tokensUsed: data.tokensUsed, // These might be missing in stream response, handled below
+            tokensUsed: data.tokensUsed,
             tokensPerSecond: 0,
             duration: 0
           };
-          setMessages((prev: Message[]) => [...prev, aiMsg]);
+
+           // Update token usage stats
+           if (data.tokensUsed) {
+              const currentTotal = settings.totalTokensUsed || 0;
+              const newEntry = {
+                timestamp: Date.now(),
+                tokens: data.tokensUsed,
+                model: modelId || selectedModel,
+                requestType: requestType || data.requestType,
+                duration: aiMsg.duration,
+                tokensPerSecond: aiMsg.tokensPerSecond
+              };
+              updateSettings({
+                totalTokensUsed: currentTotal + data.tokensUsed,
+                tokenUsageHistory: [...(settings.tokenUsageHistory || []), newEntry]
+              });
+           }
+           
+           // Update coin balance if available
+           if (data.remainingCoins !== undefined) {
+             setCoinBalance(data.remainingCoins);
+           }
+           
+           setMessages((prev: Message[]) => [...prev, aiMsg]);
        } catch (e: unknown) {
          console.error('Send message error:', e);
          let errorContent = 'An unexpected error occurred';
@@ -421,13 +417,11 @@ function ChatInterface() {
            timestamp: Date.now()
          };
         setMessages((prev: Message[]) => [...prev, errorMsg]);
-      } finally {
-        setLoading(false);
-        setStreamingReasoning(null);
-        setStreamingRequestType(null);
-        setStreamingCode(null);
-      }
-    }, [input, loading, currentThreadId, threads, selectedModel, systemPrompt, settings, createNewThread, userId, addAssetToTree, getProjectContextString, updateSettings]);
+        } finally {
+          setLoading(false);
+          setStreamingReasoning(null);
+        }
+     }, [input, loading, currentThreadId, threads, selectedModel, systemPrompt, settings, createNewThread, userId, addAssetToTree, getProjectContextString, updateSettings, userCoins]);
 
   const copyToken = async () => {
     if (pluginToken) {
@@ -490,6 +484,31 @@ function ChatInterface() {
       mounted = false;
     };
   }, [userId, regenerateToken]);
+
+  // Fetch coin balance
+  const fetchCoinBalance = useCallback(async () => {
+    if (!userId) return;
+    
+    setLoadingCoins(true);
+    try {
+      const res = await fetch(`/api/coins?userId=${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCoinBalance(data.coins || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching coin balance:', error);
+    } finally {
+      setLoadingCoins(false);
+    }
+  }, [userId]);
+
+  // Fetch coins when user logs in
+  useEffect(() => {
+    if (userId) {
+      fetchCoinBalance();
+    }
+  }, [userId, fetchCoinBalance]);
 
   if (!session) {
     const handleCustomSignIn = async (e: React.FormEvent) => {
@@ -567,31 +586,54 @@ function ChatInterface() {
     );
   }
 
-   return (
-    <div className={`flex h-screen bg-background text-foreground ${settings.compactMode ? 'compact-mode' : ''}`}>
-      {/* Sidebar */}
-      <div className={`w-64 border-r border-border p-4 hidden md:flex flex-col gap-4 sidebar-spacing`}>
-        <div className="flex items-center gap-3 font-bold text-xl text-foreground">
+    return (
+     <div className={`flex h-screen bg-background text-foreground ${settings.compactMode ? 'compact-mode' : ''}`}>
+       {/* Sidebar - Clean and minimal */}
+       <div className="w-64 bg-card border-r border-border flex flex-col p-4 h-full">
+        <div className="flex items-center gap-3 font-bold text-xl text-foreground mb-6">
           <Menu className="w-5 h-5 cursor-pointer hover:text-secondary transition-colors" />
           <span>RobloxGen AI</span>
         </div>
 
-        {/* New Chat Button */}
-        <button 
-          onClick={createNewThread}
-          className="w-full bg-primary hover:opacity-80 text-foreground font-medium py-2.5 px-4 rounded-lg transition-colors"
-        >
-          New Chat
-        </button>
+        {/* Projects Section */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-secondary flex items-center gap-2">
+              <Boxes className="w-4 h-4" />
+              Projects
+            </h3>
+            <div className="flex gap-1">
+              <button
+                onClick={() => {
+                  // Toggle project organization panel
+                  setShowProjectOrg(!showProjectOrg);
+                }}
+                className="p-1 hover:bg-hover rounded text-secondary"
+                title="Organize Projects"
+              >
+                <Folder className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <button
+              onClick={createNewThread}
+              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-hover transition-colors text-secondary"
+            >
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm">New Project</span>
+            </button>
+          </div>
+        </div>
 
         {/* Search Threads */}
-        <div className="relative">
+        <div className="relative mb-4">
           <Search className="absolute left-3 -translate-y-1/2 w-4 h-4 text-secondary" style={{top: '50%'}} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search your threads..."
+            placeholder="Search projects..."
             className="w-full bg-input border border-border rounded-lg pl-10 pr-3 py-2 text-sm text-foreground placeholder-secondary focus:outline-none focus:border-primary transition-colors"
           />
         </div>
@@ -607,7 +649,7 @@ function ChatInterface() {
                  setCurrentThreadId(thread.id);
                  setSearchQuery('');
                }}
-                className={`text-secondary text-sm p-3 hover:bg-hover rounded-lg cursor-pointer transition-all ${ 
+                className={`text-secondary text-sm p-3 hover:bg-hover rounded-lg cursor-pointer transition-all ${
                    currentThreadId === thread.id ? 'bg-primary text-foreground border border-primary' : 'hover:bg-hover'
                 }`}
              >
@@ -635,13 +677,41 @@ function ChatInterface() {
             {searchQuery && threads.filter(
               thread => thread.title.toLowerCase().includes(searchQuery.toLowerCase())
             ).length === 0 && (
-              <div className="text-secondary text-sm p-2 text-center">No threads found</div>
+              <div className="text-secondary text-sm p-2 text-center">No projects found</div>
             )}
             {!searchQuery && threads.length === 0 && (
-              <div className="text-secondary text-sm p-2 text-center">No threads yet</div>
+              <div className="text-secondary text-sm p-2 text-center">No projects yet</div>
             )}
         </div>
-         <div className="border-t border-border pt-4 space-y-3">
+
+        {/* User Section - Minimal */}
+        <div className="border-t border-border pt-4 mt-auto space-y-3">
+           {/* Coin Balance */}
+           <div className="bg-card border border-border rounded-lg p-3">
+             <div className="flex items-center justify-between mb-2">
+               <div className="flex items-center gap-2">
+                 <Coins className="w-4 h-4 text-yellow-500" />
+                 <span className="text-sm font-semibold text-foreground">Coins</span>
+               </div>
+               {loadingCoins ? (
+                 <Loader2 className="w-4 h-4 animate-spin text-secondary" />
+               ) : (
+                 <button
+                   onClick={fetchCoinBalance}
+                   className="p-1 hover:bg-hover rounded transition-colors"
+                   title="Refresh balance"
+                 >
+                   <RefreshCw className="w-3 h-3 text-secondary" />
+                 </button>
+               )}
+             </div>
+             <div className="text-2xl font-bold text-yellow-500">
+               {coinBalance.toLocaleString()}
+             </div>
+             <p className="text-xs text-secondary mt-1">1 coin ≈ 1000 tokens</p>
+           </div>
+
+           {/* User Info */}
            <div className="flex items-center gap-3">
              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold">
                U
@@ -651,35 +721,6 @@ function ChatInterface() {
                 <p className="text-xs text-secondary">ID: {userId}</p>
               </div>
             </div>
-
-           <div className="space-y-2">
-             <p className="text-xs font-medium text-secondary">Plugin Token</p>
-             <div className="flex gap-2">
-               <input
-                 type="text"
-                 value={pluginToken}
-                 readOnly
-                 className="flex-1 px-2 py-1 bg-input border border-border rounded text-xs text-foreground font-mono"
-                 placeholder="Generating..."
-               />
-               <button
-                 onClick={copyToken}
-                 disabled={!pluginToken}
-                 className="p-1 hover:bg-hover rounded transition-colors disabled:opacity-50"
-                 title="Copy token"
-               >
-                 <Copy className="w-4 h-4" />
-               </button>
-               <button
-                 onClick={regenerateToken}
-                 className="p-1 hover:bg-hover rounded transition-colors"
-                 title="Regenerate token"
-               >
-                 <RefreshCw className="w-4 h-4" />
-               </button>
-             </div>
-             <p className="text-xs text-secondary">Copy this token to your Roblox plugin settings</p>
-           </div>
 
            <button
              onClick={() => signOut()}
@@ -693,505 +734,207 @@ function ChatInterface() {
 
       {/* Main Chat */}
       <div className="flex-1 flex flex-col min-w-0">
-          {/* Top Bar */}
-          <div className="flex items-center justify-end gap-3 p-4 border-b border-border">
-            <button
-              onClick={() => setShowSystemPrompt(!showSystemPrompt)}
-               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${ 
-                  showSystemPrompt ? 'bg-primary text-foreground' : 'text-secondary hover:text-foreground hover:bg-hover'}`}
-           >
-             <MessageSquare className="w-4 h-4" />
-             <span className="text-sm">System Prompt</span>
-           </button>
-             <button
-               onClick={() => setShowSettings(true)}
-               className="p-2 text-secondary hover:text-foreground cursor-pointer transition-colors rounded-lg hover:bg-hover"
-               title="Settings"
-             >
-              <Settings className="w-5 h-5" />
-            </button>
-           <User className="w-5 h-5 text-secondary hover:text-foreground cursor-pointer transition-colors" />
-         </div>
-
-         {/* System Prompt Editor */}
-         {showSystemPrompt && (
-            <div className="p-4 border-b border-border bg-card">
-             <div className="max-w-4xl mx-auto">
-               <div className="mb-2 flex items-center justify-between">
-                  <label className="text-sm font-medium text-secondary">Custom System Prompt</label>
-                  <button
-                    onClick={() => setSystemPrompt("")}
-                    className="text-xs text-secondary hover:text-foreground transition-colors"
-                  >
-                   Clear
+          {/* Top Bar - Minimal */}
+           <div className="flex items-center justify-between p-4 border-b border-border">
+             <h1 className="text-lg font-semibold text-foreground">RobloxGen AI</h1>
+             <div className="flex items-center gap-3">
+               {/* Model Switcher */}
+               <div className="relative" ref={dropdownRef}>
+                 <button
+                   onClick={() => setShowModelDropdown(!showModelDropdown)}
+                   className="flex items-center gap-2 px-3 py-1.5 text-sm bg-card border border-border rounded-lg hover:border-primary transition-colors"
+                 >
+                    <Bot className="w-4 h-4 text-primary" />
+                   <span className="hidden sm:inline">{currentModel?.name || 'Select Model'}</span>
+                   <ChevronDown className={`w-3 h-3 transition-transform ${showModelDropdown ? 'rotate-180' : ''}`} />
                  </button>
+                 {showModelDropdown && models.length > 0 && (
+                   <>
+                     <div className="fixed inset-0 z-40" onClick={() => setShowModelDropdown(false)} />
+                     <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg overflow-hidden shadow-lg z-50 max-h-80 overflow-y-auto">
+                       {models.map((model) => (
+                         <button
+                           key={model.id}
+                           onClick={() => {
+                             setSelectedModel(model.id);
+                             setShowModelDropdown(false);
+                           }}
+                           className={`w-full px-3 py-2 text-left text-sm hover:bg-hover flex items-center gap-2 transition-colors ${
+                             selectedModel === model.id ? 'bg-primary text-primary-foreground' : 'text-foreground'
+                           }`}
+                         >
+                           <ModelIcon modelId={model.id} className="w-4 h-4 flex-shrink-0" />
+                           <span className="truncate">{model.name}</span>
+                         </button>
+                       ))}
+                     </div>
+                   </>
+                 )}
                </div>
-               <textarea
-                 value={systemPrompt}
-                 onChange={(e) => setSystemPrompt(e.target.value)}
-                 placeholder="Enter a custom system prompt... (leave empty to use default prompts)"
-                  className="w-full h-32 bg-input border border-border rounded-lg p-3 text-sm text-foreground placeholder-secondary focus:outline-none focus:border-primary resize-none"
-               />
-                <div className="mt-2 text-xs text-secondary">
-                 When empty, the system will automatically choose the best prompt based on your request type (scripting, VFX, animation, or modeling).
-               </div>
+               <button
+                 onClick={() => setShowSettings(true)}
+                 className="p-2 text-secondary hover:text-foreground cursor-pointer transition-colors rounded-lg hover:bg-hover"
+                 title="Settings"
+               >
+                <Settings className="w-5 h-5" />
+               </button>
              </div>
            </div>
-         )}
+
+
 
         <div className={`flex-1 overflow-y-auto p-4 space-y-4 message-spacing`} ref={scrollRef}>
-           {messages.length === 0 && (
-             <div className="h-full flex flex-col items-center justify-center gap-8 max-w-3xl mx-auto relative">
-                  {/* Animated background elements - Confetti and Fireworks */}
-                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    {/* Confetti pieces */}
-                    {Array.from({ length: 20 }, (_, i) => {
-                      const colors = ['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#e4e4e7', '#ffffff'];
-                      const left = Math.random() * 100;
-                      const delay = Math.random() * 10;
-                      const duration = 8 + Math.random() * 4;
-                      const size = 4 + Math.random() * 8;
-                      return (
-                        <div
-                          key={`confetti-${i}`}
-                          className="absolute animate-confetti-fall"
-                          style={{
-                            left: `${left}%`,
-                            top: '-10px',
-                            width: `${size}px`,
-                            height: `${size}px`,
-                            backgroundColor: colors[i % colors.length],
-                            borderRadius: Math.random() > 0.5 ? '50%' : '2px',
-                            animationDelay: `${delay}s`,
-                            animationDuration: `${duration}s`,
-                            opacity: 0.7,
-                          }}
-                        />
-                      );
-                    })}
-
-                    {/* Fireworks bursts */}
-                    {Array.from({ length: 5 }, (_, i) => {
-                      const left = 20 + Math.random() * 60;
-                      const top = 20 + Math.random() * 60;
-                      const delay = 2 + Math.random() * 8;
-                      const colors = ['#8b5cf6', '#a78bfa', '#c4b5fd', '#ffffff'];
-                      return (
-                        <div
-                          key={`firework-${i}`}
-                          className="absolute"
-                          style={{
-                            left: `${left}%`,
-                            top: `${top}%`,
-                            animationDelay: `${delay}s`,
-                          }}
-                        >
-                          {/* Firework center */}
-                          <div
-                            className="absolute w-2 h-2 rounded-full animate-firework-burst"
-                            style={{
-                              backgroundColor: colors[i % colors.length],
-                              animationDuration: '1.5s',
-                            }}
-                          />
-                          {/* Firework particles */}
-                          {Array.from({ length: 8 }, (_, j) => {
-                            const angle = (j * 45) * (Math.PI / 180);
-                            const distance = 30 + Math.random() * 20;
-                            const tx = Math.cos(angle) * distance;
-                            const ty = Math.sin(angle) * distance;
-                            return (
-                              <div
-                                key={`particle-${i}-${j}`}
-                                className="absolute w-1 h-1 rounded-full animate-firework-particle"
-                                style={{
-                                  backgroundColor: colors[i % colors.length],
-                                  '--tx': `${tx}px`,
-                                  '--ty': `${ty}px`,
-                                  animationDelay: '0.3s',
-                                  animationDuration: '1.2s',
-                                } as React.CSSProperties}
-                              />
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                 <div className="text-center space-y-4">
-                   <h1 className="text-4xl font-bold text-white">What would you like to create in Roblox?</h1>
-                    <p className="text-secondary text-lg">Describe your idea and watch AI bring it to life</p>
-                 </div>
-                
-                {/* Action Buttons - Roblox Asset Types */}
-                <div className="flex gap-3 flex-wrap justify-center">
-                  {[ 
-                    { icon: Code2, label: 'Scripting', prompt: 'Create a script for' },
-                    { icon: SparklesIcon, label: 'VFX', prompt: 'Create a VFX effect for' },
-                    { icon: Film, label: 'Animation', prompt: 'Create an animation for' },
-                    { icon: Boxes, label: 'Modeling', prompt: 'Create a model for' }
-                  ].map(({ icon: Icon, label, prompt }) => (
-                    <button
-                      key={label}
-                      onClick={() => setInput(prompt + ' ')}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border rounded-lg text-foreground hover:border-primary transition-colors"
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span>{label}</span>
-                    </button>
-                  ))}
+            {messages.length === 0 && (
+              <div className="h-full flex flex-col items-center justify-center gap-6 max-w-2xl mx-auto text-center">
+                <div className="space-y-2">
+                  <h1 className="text-2xl font-semibold text-foreground">Welcome to RobloxGen AI</h1>
+                  <p className="text-secondary">Describe what you want to create in Roblox and I'll help you build it.</p>
+                </div>
+                <div className="bg-primary/10 p-4 rounded-lg border border-primary/20 max-w-sm mx-auto">
+                  <h3 className="text-sm font-semibold text-primary flex items-center justify-center gap-2">
+                    <Key className="w-4 h-4" />
+                    Your Plugin Token
+                  </h3>
+                  <p className="text-xs text-primary/80 mt-2">Look in the left sidebar under "Plugin Token" to find your connection token</p>
+                  <p className="text-xs text-primary/60">Copy this token to your Roblox plugin settings</p>
                 </div>
 
-                 {/* Smart Suggestions - Context Aware */}
-                 <div className="space-y-3 w-full">
-                    <div className="flex items-center gap-2 text-sm text-secondary font-medium">
-                     <Lightbulb className="w-4 h-4" />
-                     Smart Suggestions
-                   </div>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                     {[ 
-                       { text: "Script a DataStore leaderboard system", icon: Code2, category: "Systems" },
-                       { text: "Create a raycasting gun script", icon: Swords, category: "Combat" },
-                       { text: "Make a GUI shop with tweening", icon: ShoppingCart, category: "UI" },
-                       { text: "Build a low-poly pet model", icon: Dog, category: "Modeling" },
-                       { text: "Create a fire aura particle effect", icon: ZapIcon, category: "VFX" },
-                       { text: "Script a round-based game loop", icon: Sun, category: "Gameplay" },
-                       { text: "Make a custom character controller", icon: MessageCircle, category: "Systems" },
-                       { text: "Create an R15 walking animation", icon: Film, category: "Animation" }
-                     ].map((suggestion) => (
-                       <button
-                         key={suggestion.text}
-                         onClick={() => setInput(suggestion.text)}
-                           className="flex items-center gap-2 text-left text-secondary hover:text-foreground p-3 rounded-lg hover:bg-hover border border-border hover:border-primary transition-all group"
-                       >
-                          <suggestion.icon className="w-4 h-4 text-secondary group-hover:text-primary" />
-                         <div className="flex-1">
-                           <div className="text-sm">{suggestion.text}</div>
-                             <div className="text-xs text-secondary group-hover:text-foreground" style={{opacity: 0.7}}>{suggestion.category}</div>
-                         </div>
-                       </button>
-                     ))}
-                   </div>
-                 </div>
-            </div>
-          )}
-          
-            {/* Unified Streaming Message */}
-            {loading && (
-              <div className="flex justify-start animate-fade-in">
-                <div className="max-w-2xl p-4 rounded-xl bg-card border border-border w-full">
-                  {/* Header - Request Type or Loading */}
-                  {streamingRequestType && (
-                    <div className="mb-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                        streamingRequestType === 'scripting' ? 'bg-blue-500 text-blue-400 border border-blue-800' :
-                        streamingRequestType === 'vfx' ? 'bg-purple-500 text-purple-400 border border-purple-800' :
-                        streamingRequestType === 'animation' ? 'bg-pink-500 text-pink-400 border border-pink-800' :
-                        'bg-orange-500 text-orange-400 border border-orange-800'
-                      }`}>
-                        {streamingRequestType === 'scripting' && <Code2 className="w-3 h-3" />}
-                        {streamingRequestType === 'vfx' && <SparklesIcon className="w-3 h-3" />}
-                        {streamingRequestType === 'animation' && <Film className="w-3 h-3" />}
-                        {streamingRequestType === 'modeling' && <Boxes className="w-3 h-3" />}
-                        {' '}
-                        {streamingRequestType.charAt(0).toUpperCase() + streamingRequestType.slice(1)} Mode
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Reasoning Stream */}
-                  {streamingReasoning !== null ? (
-                     <div className="mb-4 pl-4 border-l-2 border-primary/30">
-                        <div className="flex items-center gap-2 mb-1 opacity-70">
-                          <Brain className="w-3 h-3 text-primary animate-pulse" />
-                           <span className="text-xs font-medium text-primary">Reasoning</span>
-                        </div>
-                         <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
-                          {streamingReasoning}
-                          <span className="animate-pulse ml-1">|</span>
-                        </p>
-                     </div>
-                  ) : (
-                     /* Initial Loading State before reasoning starts */
-                     <div className="flex items-center gap-3 mb-4">
-                        <div className="relative">
-                           <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                        </div>
-                        <div>
-                           <div className="text-foreground text-sm font-medium">AI is thinking...</div>
-                           <div className="text-secondary text-xs">Generating with {currentModel?.name}</div>
-                        </div>
-                     </div>
-                  )}
-
-                  {/* Code Stream */}
-                  {streamingCode && (
-                    <div className="mt-4 pt-4 border-t border-white/5">
-                       <div className="flex items-center gap-2 mb-2">
-                          <Code2 className="w-4 h-4 text-green-400" />
-                          <span className="text-xs font-medium text-green-400">Live Coding</span>
+                <div className="w-full space-y-3">
+                  <div className="text-sm text-secondary font-medium">Quick start:</div>
+                  <div className="grid grid-cols-2 gap-2">
+                     <button
+                       onClick={() => setInput("Create a leaderboard script")}
+                       className="p-3 text-left bg-card border border-border rounded-lg hover:border-primary transition-colors flex items-start gap-3"
+                     >
+                       <Trophy className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                       <div>
+                         <div className="text-sm font-medium">Leaderboard Script</div>
+                         <div className="text-xs text-secondary">DataStore system</div>
                        </div>
-                       <div className="bg-black/50 rounded-lg p-3 font-mono text-xs text-green-300 overflow-x-auto border border-white/10">
-                          <pre className="whitespace-pre-wrap">
-                            {streamingCode}
-                            {!streamingCode.endsWith('\n') && <span className="animate-pulse">_</span>}
-                          </pre>
+                     </button>
+                     <button
+                       onClick={() => setInput("Create a gun script")}
+                       className="p-3 text-left bg-card border border-border rounded-lg hover:border-primary transition-colors flex items-start gap-3"
+                     >
+                       <Target className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                       <div>
+                         <div className="text-sm font-medium">Gun Script</div>
+                         <div className="text-xs text-secondary">Raycasting weapon</div>
                        </div>
-                    </div>
-                  )}
+                     </button>
+                     <button
+                       onClick={() => setInput("Create a shop GUI")}
+                       className="p-3 text-left bg-card border border-border rounded-lg hover:border-primary transition-colors flex items-start gap-3"
+                     >
+                       <ShoppingBag className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                       <div>
+                         <div className="text-sm font-medium">Shop GUI</div>
+                         <div className="text-xs text-secondary">Tweening interface</div>
+                       </div>
+                     </button>
+                     <button
+                       onClick={() => setInput("Create a particle effect")}
+                       className="p-3 text-left bg-card border border-border rounded-lg hover:border-primary transition-colors flex items-start gap-3"
+                     >
+                       <Sparkles className="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0" />
+                       <div>
+                         <div className="text-sm font-medium">Particle Effect</div>
+                         <div className="text-xs text-secondary">VFX system</div>
+                       </div>
+                     </button>
+                  </div>
                 </div>
               </div>
             )}
           
-          {messages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-               <div className={`max-w-2xl p-4 rounded-xl animate-fade-in ${ 
-                  msg.role === 'user' ? 'bg-primary text-foreground' :
-                  msg.role === 'error' ? 'bg-error border border-error text-error' : 'bg-card border border-border'
-               }`}> 
-                {/* Request Type Badge */}
-                {msg.requestType && (
-                  <div className="mb-2">
-                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${ 
-                       msg.requestType === 'scripting' ? 'bg-blue-500 text-blue-400 border border-blue-800' :
-                       msg.requestType === 'vfx' ? 'bg-purple-500 text-purple-400 border border-purple-800' :
-                       msg.requestType === 'animation' ? 'bg-pink-500 text-pink-400 border border-pink-800' :
-                       'bg-orange-500 text-orange-400 border border-orange-800'
-                      }`}>
-                       {msg.requestType === 'scripting' && <Code2 className="w-3 h-3" />}
-                       {msg.requestType === 'vfx' && <SparklesIcon className="w-3 h-3" />}
-                       {msg.requestType === 'animation' && <Film className="w-3 h-3" />}
-                       {msg.requestType === 'modeling' && <Boxes className="w-3 h-3" />}
-                       {' '}
-                       {msg.requestType.charAt(0).toUpperCase() + msg.requestType.slice(1)} Mode
-                     </span>
-                  </div>
-                )}
-
-                {/* Plan Display */}
-                {msg.plan && msg.plan.length > 0 && (
-                  <div className="mb-4 bg-black/20 rounded-lg p-3 border border-white/10">
-                    <div className="flex items-center gap-2 mb-3">
-                      <ListChecks className="w-4 h-4 text-primary" />
-                      <span className="text-xs font-bold text-primary uppercase">Implementation Plan</span>
-                    </div>
-                    <div className="space-y-2">
-                      {msg.plan.map((step: string, idx: number) => (
-                        <div key={idx} className="flex items-start gap-3 text-sm text-gray-300">
-                          <div className="mt-0.5 w-4 h-4 rounded-full border border-primary/50 flex items-center justify-center bg-primary/20 text-primary text-[10px] flex-shrink-0">
-                            ✓
-                          </div>
-                          <span className="leading-tight">{step}</span>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {msg.isPlanProposal && (
-                      <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
-                        <button
-                          onClick={() => {
-                             // Find the previous user message for context
-                             const prevUserMsg = messages[i-1];
-                             const originalReq = prevUserMsg ? prevUserMsg.content : "Unknown Request";
-                             handleApprovePlan(msg.plan!, originalReq);
-                          }}
-                          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-bold transition-colors"
-                        >
-                          <Check className="w-3 h-3" />
-                          APPROVE & EXECUTE
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Reasoning Display */}
-                {msg.reasoning && (
-        <div className="mb-4 pl-4 border-l-2 border-primary/30">
-                    <div className="flex items-center gap-2 mb-1 opacity-70">
-                      <Brain className="w-3 h-3 text-primary" />
-                       <span className="text-xs font-medium text-primary">Reasoning</span>
-                    </div>
-                    <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{msg.reasoning}</p>
-                  </div>
-                )}
-                
-                <div className="mb-2">{msg.content}</div>
-                
-                {/* Model and Token Info */}
-                {msg.model && (
-                     <div className="mt-3 pt-3 border-t border-border space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                       <span className="text-secondary">Model:</span>
-                      <span className="text-primary font-medium">{msg.model}</span>
-                    </div>
-                     {msg.tokensUsed && msg.tokensUsed > 0 && (
-                      <>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-secondary">Tokens:</span>
-                           <span className="text-foreground">{msg.tokensUsed.toLocaleString()}</span>
-                        </div>
-                         {msg.tokensPerSecond && msg.tokensPerSecond > 0 && (
-                          <div className="flex items-center justify-between text-xs">
-                             <span className="text-secondary">Speed:</span>
-                            <span className="text-primary font-medium">{msg.tokensPerSecond.toFixed(1)} tokens/s</span>
-                          </div>
-                        )}
-                        {msg.duration && (
-                          <div className="flex items-center justify-between text-xs">
-                             <span className="text-secondary">Duration:</span>
-                             <span className="text-foreground">{msg.duration.toFixed(2)}s</span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-                
-                {msg.data && (
-                  <div className="flex gap-2 mt-2">
-                    <button 
-                        onClick={() => setPreviewData(msg.data)}
-                        className="flex items-center gap-2 px-3 py-1 bg-secondary hover:bg-secondary rounded text-xs border border-border"
-                    >
-                        <Code className="w-3 h-3" /> View Data
-                    </button>
-                      <div className="flex items-center gap-2 px-3 py-1 bg-success text-success rounded text-xs border border-success">
-                         sent to plugin
+           {messages.map((msg, i) => (
+             <div key={i}>
+               <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
+                   <div className={`max-w-2xl p-3 rounded-lg animate-fade-in ${
+                     msg.role === 'user' ? 'bg-primary text-primary-foreground' :
+                     msg.role === 'error' ? 'bg-red-900 border border-red-700 text-red-100' : 'bg-card border border-border text-foreground'
+                   }`}>
+                   <div className="whitespace-pre-wrap">{msg.content}</div>
+                   <div className="flex items-center gap-3 mt-2">
+                     {msg.timestamp && (
+                       <div className="text-xs opacity-60">
+                         {new Date(msg.timestamp).toLocaleTimeString()}
+                       </div>
+                     )}
+                     {msg.role === 'ai' && msg.data && (msg.data as any).coinCost && (
+                       <>
+                         <span className="text-xs opacity-60">•</span>
+                         <div className="flex items-center gap-1 text-xs opacity-60">
+                           <Coins className="w-3 h-3 text-yellow-500" />
+                           <span>{(msg.data as any).coinCost} coins</span>
+                         </div>
+                       </>
+                     )}
+                   </div>
+                 </div>
+               </div>
+               {/* Show loading indicator after user's message when AI is generating */}
+               {msg.role === 'user' && loading && i === messages.length - 1 && (
+                 <div className="flex justify-start mb-4 animate-fade-in">
+                   <div className="max-w-2xl p-3 rounded-lg bg-card border border-border">
+                     <div className="flex items-center gap-3">
+                       <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                       <div className="text-sm text-secondary">AI is generating...</div>
                      </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+                   </div>
+                 </div>
+               )}
+             </div>
+           ))}
           
-            {loading && !streamingReasoning && (
-               <div className="flex justify-start">
-                   <div className="bg-card border border-border p-4 rounded-xl">
-                      <div className="flex items-center gap-3 mb-2">
-                          <div className="relative">
-                              <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                               <div className="absolute inset-0 w-5 h-5 border-2 border-primary rounded-full animate-ping" style={{opacity: 0.2}}></div>
-                          </div>
-                          <div>
-                               <div className="text-foreground text-sm font-medium">Generating with {currentModel?.name}</div>
-                               <div className="text-secondary text-xs">Initializing AI model...</div>
-                          </div>
-                      </div>
-                  <div className="flex items-center gap-2 text-xs text-secondary">
-                          <div className="flex gap-1">
-                              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" style={{animationDelay: '0ms'}}></div>
-                              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" style={{animationDelay: '200ms'}}></div>
-                              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" style={{animationDelay: '400ms'}}></div>
-                              <div className="w-1 h-1 bg-primary rounded-full animate-pulse" style={{animationDelay: '600ms'}}></div>
-                          </div>
-                          <span>Connecting to AI • Loading model • Preparing workspace</span>
-                      </div>
-                  </div>
-              </div>
-           )}
+
         </div>
 
-        {/* Input Area */}
-        <div className="p-4 bg-card border-t border-border">
-          <div className="max-w-4xl mx-auto">
-             <div className="relative flex items-center bg-input border border-border rounded-xl focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
-              {/* Model selector - Always visible */}
-              <div className="relative" ref={dropdownRef}>
-                  <button
-                    onClick={() => setShowModelDropdown(!showModelDropdown)}
-                     className="flex items-center gap-2 px-3 py-4 text-xs text-foreground border-r border-border hover:text-foreground hover:bg-hover transition-colors min-w-[120px] sm:min-w-[180px]"
-                    title={currentModel?.name || 'Select Model'}
-                  >
-                  {currentModel ? (
-                    <>
-                      <ModelIcon modelId={currentModel.id} className="w-4 h-4 flex-shrink-0" />
-                      <span className="hidden sm:inline whitespace-nowrap truncate">{currentModel.name}</span>
-                      <span className="sm:hidden whitespace-nowrap truncate text-[10px]">{currentModel.name.split(' ')[0]}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Brain className="w-4 h-4 flex-shrink-0" />
-                      <span className="whitespace-nowrap">Select Model</span>
-                    </>
-                  )}
-                  <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${showModelDropdown ? 'rotate-180' : ''}`} />
-                </button>
-                 {showModelDropdown && models.length > 0 && (
-                   <>
-                     <div className="fixed inset-0 z-40" onClick={() => setShowModelDropdown(false)} />
-                     <div className="absolute bottom-full left-0 mb-2 w-72 bg-card border border-border rounded-lg overflow-hidden max-h-96 overflow-y-auto shadow-2xl z-50">
-                      {['OpenCode', 'OpenAI', 'Anthropic', 'Google', 'Meta', 'Mistral', 'DeepSeek', 'Qwen', 'GLM', 'Grok', 'Moonshot', 'MiniMax', 'Other'].filter(cat => 
-                        models.some(m => m.category === cat)
-                      ).map((category) => {
-                        const categoryModels = models.filter(m => m.category === category);
-                        if (categoryModels.length === 0) return null;
-                        return (
-                          <div key={category}>
-                            <div className="px-3 py-1.5 text-xs font-bold text-secondary bg-card border-b border-border sticky top-0">
-                              {category}
-                            </div>
-                            {categoryModels.map((model) => (
-                              <button
-                                key={model.id}
-                                onClick={() => {
-                                  setSelectedModel(model.id);
-                                  setShowModelDropdown(false);
-                                }}
-                                className={`w-full px-3 py-2 text-left text-sm hover:bg-hover flex items-center gap-2 transition-colors ${ 
-                                  selectedModel === model.id ? 'bg-primary text-foreground' : 'text-foreground'
-                                }`}
-                              >
-                                <ModelIcon modelId={model.id} className="w-4 h-4 flex-shrink-0" />
-                                <span className="truncate">{model.name}</span>
-                                {selectedModel === model.id && (
-                                  <Check className="w-3 h-3 ml-auto flex-shrink-0 text-primary" />
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </div>
-                   </>
-                 )}
-              </div>
+         {/* Input Area */}
+         <div className="p-4 bg-card border-t border-border">
+           <div className="max-w-4xl mx-auto">
+             {/* Coin estimate hint */}
+             {input.trim() && (
+               <div className="flex items-center gap-2 text-xs text-secondary mb-2">
+                 <Coins className="w-3 h-3 text-yellow-500" />
+                 <span>Estimated cost: ~1-5 coins (varies by complexity)</span>
+               </div>
+             )}
+             <div className="flex items-center gap-3">
                <input
                  type="text"
                  value={input}
                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && settings.enterToSend) {
-                      e.preventDefault();
-                      sendMessage();
-                    }
-                  }}
-                 placeholder="Describe what you want to create in Roblox... (Enter to send, Shift+Enter for new line)"
-                  className="flex-1 bg-transparent py-4 pl-4 pr-20 focus:outline-none text-[var(--val-foreground)] placeholder-secondary resize-none"
+                 onKeyDown={(e) => {
+                   if (e.key === 'Enter' && !e.shiftKey) {
+                     e.preventDefault();
+                     sendMessage();
+                   }
+                 }}
+                 placeholder="Type your message..."
+                 className="flex-1 bg-input border border-border rounded-lg px-4 py-3 focus:outline-none focus:border-primary text-foreground placeholder-secondary"
                />
-              <div className="flex items-center gap-2 pr-2">
-                <button 
-                    onClick={sendMessage}
-                    disabled={loading || !input.trim()}
-                     className="px-3 h-8 bg-primary hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg flex items-center justify-center transition-colors"
-                >
-                    <Send className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+               <button
+                 onClick={() => sendMessage()}
+                 disabled={loading || !input.trim()}
+                 className="px-4 py-3 bg-primary hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg flex items-center justify-center transition-colors"
+               >
+                 <Send className="w-4 h-4" />
+               </button>
+             </div>
+           </div>
           </div>
-        </div>
-      </div>
-
-      {/* Right Sidebar - Project Explorer */}
-      <div className="w-64 border-l border-border hidden lg:flex flex-col bg-card">
-        <ProjectExplorer />
-      </div>
+       </div>
 
        {previewData && <PreviewModal data={previewData} onClose={() => setPreviewData(null)} />}
-       <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
-    </div>
+       <SettingsPanel
+         isOpen={showSettings}
+         onClose={() => setShowSettings(false)}
+         pluginToken={pluginToken}
+         copyToken={copyToken}
+         regenerateToken={regenerateToken}
+       />
+     </div>
   );
 }
 

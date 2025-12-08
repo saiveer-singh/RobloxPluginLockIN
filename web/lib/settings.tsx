@@ -20,6 +20,15 @@ export interface ThemeColors {
   warning: string;
 }
 
+export interface TokenUsageEntry {
+  timestamp: number;
+  tokens: number;
+  model?: string;
+  requestType?: string;
+  duration?: number;
+  tokensPerSecond?: number;
+}
+
 export interface Settings {
   // Theme
   theme: ThemePreset;
@@ -50,6 +59,7 @@ export interface Settings {
 
   // Usage Stats
   totalTokensUsed: number;
+  tokenUsageHistory: TokenUsageEntry[];
 }
 
 const defaultSettings: Settings = {
@@ -69,6 +79,7 @@ const defaultSettings: Settings = {
   autoFocus: true,
   soundEnabled: false,
   totalTokensUsed: 0,
+  tokenUsageHistory: [],
 };
 
 const themePresets: Record<ThemePreset, ThemeColors> = {

@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  /* Default dark theme variables */
-  --val-background: #000000;
-  --val-foreground: #ffffff;
+  /* Default dark theme variables - Improved for better contrast */
+  --val-background: #0a0a0a;
+  --val-foreground: #f5f5f5;
   --val-primary: #3b82f6;
   --val-primary-foreground: #ffffff;
-  --val-secondary: #a1a1aa;
+  --val-secondary: #c0c0c0;
   --val-accent: #3b82f6;
-  --val-border: #333333;
-  --val-card: #000000;
-  --val-input: #121212;
-  --val-hover: #1a1a1a;
+  --val-border: #404040;
+  --val-card: #121212;
+  --val-input: #1e1e1e;
+  --val-hover: #2a2a2a;
   --val-success: #4ade80;
   --val-error: #f87171;
   --val-warning: #fbbf24;

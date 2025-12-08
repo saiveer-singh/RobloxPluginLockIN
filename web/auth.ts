@@ -1,7 +1,8 @@
 import NextAuth, { DefaultSession } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
-import type { JWT, Session, DefaultSession } from "next-auth"
+import type { JWT } from "next-auth/jwt"
+import type { Session } from "next-auth"
 
 // Disable NextAuth telemetry
 process.env.NEXTAUTH_TELEMETRY = 'false'
@@ -53,7 +54,7 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: { token: JWT, user: unknown }) {
+    async jwt({ token, user }: { token: JWT, user: any }) {
       if (user) {
         // Generate a fake Roblox ID based on Google ID or email
         const identifier = user.id || user.email || 'default';
@@ -66,9 +67,10 @@ export const authOptions = {
       }
       return token
     },
-    async session({ session, token }: { session: Session, token: JWT }) {
+    async session(params: { session: Session; token: JWT; user: any; newSession?: any; trigger?: string }) {
+      const { session, token } = params;
       if (session.user) {
-        session.user.robloxId = token.robloxId
+        session.user.robloxId = token.robloxId as string
       }
       return session
     },

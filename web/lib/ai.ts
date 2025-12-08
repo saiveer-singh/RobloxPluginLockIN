@@ -36,42 +36,46 @@ function getApiKeys(): Record<string, string | undefined> {
   return keys;
 }
 
-const PLANNING_PROMPT = `
-You are a Technical Architect for Roblox game development. Your goal is to analyze the user's request and create a detailed, step-by-step execution plan.
-
-CRITICAL: Output MUST be strict JSON matching this exact schema:
-{
-  "plan": [
-    "Step 1: Description of first action",
-    "Step 2: Description of second action",
-    ...
-  ],
-  "message": "A brief summary of the proposed plan."
-}
-
-DO NOT generate code, assets, or scripts yet. Focus ONLY on the plan.
-Break down complex tasks into logical, manageable steps that a developer would follow.
-Consider:
-- Architecture and file structure
-- Dependencies between components
-- Configuration and properties
-`;
-
 const BASE_SCHEMA = `
-CRITICAL: Output MUST be strict JSON matching this exact schema (no markdown, no code blocks, pure JSON only):
+CRITICAL FORMATTING RULES:
+1. Your ENTIRE response must be valid JSON
+2. Do NOT use markdown code blocks (no \`\`\`json or \`\`\`)
+3. Do NOT include any text before or after the JSON
+4. The JSON must start with { and end with }
+5. All property values must be properly quoted strings
+
+OUTPUT FORMAT (copy this structure exactly):
 {
-  "reasoning": "High-level thought process...",
-  "plan": [
-    "Step 1: Detailed description of task...",
-    "Step 2: ...",
-    ...
-  ],
-  "message": "Concise description of what was created...",
+  "reasoning": "Your detailed thought process here...",
+  "message": "Brief description of what was created",
   "assets": [
     {
-      "ClassName": "String",
-      "Properties": { "PropertyName": "Value" },
-      "Children": [ ... ]
+      "ClassName": "Part",
+      "Properties": {
+        "Name": "ExamplePart",
+        "Size": "4,4,4",
+        "Position": "0,10,0"
+      },
+      "Children": []
+    }
+  ]
+}
+
+EXAMPLE VALID RESPONSE:
+{
+  "reasoning": "Creating a red glowing part requires: 1) A Part with Neon material, 2) Red color using Color3, 3) Proper size and position",
+  "message": "Created a red glowing part",
+  "assets": [
+    {
+      "ClassName": "Part",
+      "Properties": {
+        "Name": "GlowingPart",
+        "Size": "4,4,4",
+        "Material": "Enum.Material.Neon",
+        "Color": "255,0,0",
+        "Anchored": "true"
+      },
+      "Children": []
     }
   ]
 }
@@ -106,6 +110,8 @@ The system intelligently places assets based on ClassName, name context, and fun
 const SCRIPTING_PROMPT = `
 You are an advanced Roblox AI system with deep expertise in Luau programming, game architecture, and production-ready development. You analyze requirements comprehensively and create sophisticated, optimized solutions.
 
+⚠️ CRITICAL: You MUST respond with ONLY valid JSON. No other text. No markdown. Just pure JSON starting with { and ending with }.
+
 ${BASE_SCHEMA}
 
 ADVANCED EXPERTISE AREAS:
@@ -119,8 +125,6 @@ ADVANCED EXPERTISE AREAS:
 - Advanced physics simulation, raycasting, and spatial optimization
 - Sophisticated networking with data synchronization and conflict resolution
 - Production debugging, logging, and monitoring systems
-
-PLANNING REQUIREMENT: You MUST provide a detailed, step-by-step implementation plan in the "plan" array. This helps the user understand your approach.
 
 COMPREHENSIVE REQUIREMENTS:
 1. ARCHITECTURE: Design modular, scalable systems with clear separation of concerns
@@ -168,6 +172,8 @@ CRITICAL: Deliver complete, production-ready systems with enterprise-grade quali
 
 const VFX_PROMPT = `
 You are an advanced visual effects AI system with expertise in particle physics, computer graphics, and real-time rendering optimization. You create cinematic, performance-optimized visual effects that enhance user experience while maintaining high frame rates.
+
+⚠️ CRITICAL: You MUST respond with ONLY valid JSON. No other text. No markdown. Just pure JSON starting with { and ending with }.
 
 ${BASE_SCHEMA}
 
@@ -230,6 +236,8 @@ CRITICAL: Create visually stunning, performance-optimized effects with cinematic
 const ANIMATION_PROMPT = `
 You are a Roblox animation expert specializing in character animations, movement systems, and procedural animation.
 
+⚠️ CRITICAL: You MUST respond with ONLY valid JSON. No other text. No markdown. Just pure JSON starting with { and ending with }.
+
 ${BASE_SCHEMA}
 
 YOUR EXPERTISE:
@@ -288,6 +296,8 @@ CRITICAL: Always create complete animation systems with proper character handlin
 
 const MODELING_PROMPT = `
 You are a master Roblox builder and 3D modeler specializing in creating detailed, well-structured models and builds.
+
+⚠️ CRITICAL: You MUST respond with ONLY valid JSON. No other text. No markdown. Just pure JSON starting with { and ending with }.
 
 ${BASE_SCHEMA}
 
@@ -379,6 +389,32 @@ EXAMPLE - Modern House:
 
 CRITICAL: Always create complete, well-structured models with proper hierarchy and materials.
 `;
+
+// Get the appropriate system prompt based on request type
+export function getSystemPrompt(requestType: 'scripting' | 'vfx' | 'animation' | 'modeling', customPrompt?: string): string {
+  let fullSystemPrompt = '';
+  
+  switch (requestType) {
+    case 'scripting':
+      fullSystemPrompt = SCRIPTING_PROMPT;
+      break;
+    case 'vfx':
+      fullSystemPrompt = VFX_PROMPT;
+      break;
+    case 'animation':
+      fullSystemPrompt = ANIMATION_PROMPT;
+      break;
+    case 'modeling':
+      fullSystemPrompt = MODELING_PROMPT;
+      break;
+  }
+
+  if (customPrompt) {
+    fullSystemPrompt += '\n\n' + customPrompt;
+  }
+
+  return fullSystemPrompt;
+}
 
 // Enhanced request type detection with context awareness and scoring
 export function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animation' | 'modeling' {
@@ -567,58 +603,10 @@ export function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animat
   return bestType as 'scripting' | 'vfx' | 'animation' | 'modeling';
 }
 
-export type ModelProvider =
-  | 'x-ai-grok-4.1-fast-free'
-  | 'z-ai-glm-4.5-air-free'
-  | 'moonshotai-kimi-k2-free'
-  | 'qwen-qwen3-coder-free'
-  | 'gpt-5-nano'
-  | 'grok-code'
-  | 'big-pickle';
+import type { ModelProvider, ModelConfig } from './models';
+import { MODEL_CONFIGS } from './models';
 
-export interface ModelConfig {
-  provider: string;
-  modelId: string;
-  displayName: string;
-}
 
-export const MODEL_CONFIGS: Record<ModelProvider, ModelConfig> = {
-  'x-ai-grok-4.1-fast-free': {
-    provider: 'openrouter',
-    modelId: 'x-ai/grok-4.1-fast:free',
-    displayName: 'Grok 4.1 Fast Free'
-  },
-  'z-ai-glm-4.5-air-free': {
-    provider: 'openrouter',
-    modelId: 'z-ai/glm-4.5-air:free',
-    displayName: 'GLM 4.5 Air Free'
-  },
-  'moonshotai-kimi-k2-free': {
-    provider: 'openrouter',
-    modelId: 'moonshotai/kimi-k2:free',
-    displayName: 'Kimi K2 Free'
-  },
-  'qwen-qwen3-coder-free': {
-    provider: 'openrouter',
-    modelId: 'qwen/qwen3-coder:free',
-    displayName: 'Qwen 3 Coder Free'
-  },
-  'gpt-5-nano': {
-    provider: 'opencode',
-    modelId: 'gpt-5-nano',
-    displayName: 'GPT 5 Nano'
-  },
-  'grok-code': {
-    provider: 'opencode',
-    modelId: 'grok-code',
-    displayName: 'Grok Code Fast 1'
-  },
-  'big-pickle': {
-    provider: 'opencode',
-    modelId: 'big-pickle',
-    displayName: 'Big Pickle'
-  }
-};
 
 export interface GenerationResult {
   content: unknown;
@@ -636,13 +624,17 @@ export interface GenerationResult {
 export function cleanJson(text: string): string {
   if (!text) return text;
 
-  // Remove markdown code blocks (```json ... ``` or just ``` ... ```)
-  // We use a simple replacement for common patterns
-  let cleaned = text;
+  let cleaned = text.trim();
 
-  // Remove ```json and ```
-  // Using simple replaceAll if available or global regex
-  cleaned = cleaned.replace(/```json/g, '').replace(/```/g, '');
+  // Remove markdown code blocks
+  cleaned = cleaned.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  
+  // Remove common prefixes
+  cleaned = cleaned.replace(/^Here's the JSON:/i, '');
+  cleaned = cleaned.replace(/^JSON:/i, '');
+  cleaned = cleaned.replace(/^Response:/i, '');
+  
+  cleaned = cleaned.trim();
 
   // Find the first '{' and last '}'
   const firstOpen = cleaned.indexOf('{');
@@ -652,7 +644,35 @@ export function cleanJson(text: string): string {
     cleaned = cleaned.substring(firstOpen, lastClose + 1);
   }
 
-  return cleaned.trim();
+  // Try to fix common JSON issues
+  try {
+    // Test if it's valid JSON
+    JSON.parse(cleaned);
+    return cleaned;
+  } catch (e) {
+    // If parsing fails, try to fix common issues
+    console.log('JSON parse failed, attempting to fix...');
+    
+    // Remove trailing commas
+    let fixed = cleaned.replace(/,(\s*[}\]])/g, '$1');
+    
+    // Try to find JSON object with better regex
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      fixed = jsonMatch[0];
+      // Remove trailing commas in the matched content
+      fixed = fixed.replace(/,(\s*[}\]])/g, '$1');
+    }
+    
+    // Try parsing the fixed version
+    try {
+      JSON.parse(fixed);
+      return fixed;
+    } catch (e2) {
+      // Return the best attempt
+      return fixed;
+    }
+  }
 }
 
 export async function generateContent(prompt: string, model: string, systemPrompt?: string): Promise<GenerationResult> {
@@ -786,35 +806,11 @@ export async function generateContent(prompt: string, model: string, systemPromp
 export async function generateContentStream(
   prompt: string,
   model: string,
-  systemPrompt?: string,
-  mode: 'planning' | 'execution' = 'execution'
+  systemPrompt?: string
 ): Promise<{ stream: ReadableStream<Uint8Array>; requestType: string; provider: string; modelId: string }> {
   const requestType = detectRequestType(prompt);
 
-  let fullSystemPrompt = '';
-  
-  if (mode === 'planning') {
-    fullSystemPrompt = PLANNING_PROMPT;
-  } else {
-    switch (requestType) {
-      case 'scripting':
-        fullSystemPrompt = SCRIPTING_PROMPT;
-        break;
-      case 'vfx':
-        fullSystemPrompt = VFX_PROMPT;
-        break;
-      case 'animation':
-        fullSystemPrompt = ANIMATION_PROMPT;
-        break;
-      case 'modeling':
-        fullSystemPrompt = MODELING_PROMPT;
-        break;
-    }
-  }
-
-  if (systemPrompt) {
-    fullSystemPrompt += '\n\n' + systemPrompt;
-  }
+  const fullSystemPrompt = getSystemPrompt(requestType, systemPrompt);
 
   const config = MODEL_CONFIGS[model as keyof typeof MODEL_CONFIGS];
   if (!config) {
@@ -835,9 +831,13 @@ export async function generateContentStream(
   }
 
   if (!apiKey) {
-    throw new Error(`API key not found for provider: ${config.provider}`);
+    console.error('API keys available:', Object.keys(currentApiKeys).filter(k => currentApiKeys[k]));
+    throw new Error(`API key not found for provider: ${config.provider}. Please check your api-keys.json file or environment variables.`);
   }
 
+  console.log('Fetching from:', endpoint);
+  console.log('Using model:', config.modelId);
+  
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -859,11 +859,15 @@ export async function generateContentStream(
   });
 
   if (!response.ok) {
-    throw new Error(`OpenRouter API Error: ${response.statusText}`);
+    const errorText = await response.text();
+    console.error('API Error Response:', errorText);
+    console.error('Response status:', response.status);
+    console.error('Response headers:', Object.fromEntries(response.headers.entries()));
+    throw new Error(`API Error (${config.provider}): ${response.statusText} - ${errorText}`);
   }
 
   if (!response.body) {
-    throw new Error('No response body from OpenRouter');
+    throw new Error('No response body from API');
   }
 
   return { 
