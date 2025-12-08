@@ -421,7 +421,7 @@ function ChatInterface() {
           setLoading(false);
           setStreamingReasoning(null);
         }
-     }, [input, loading, currentThreadId, threads, selectedModel, systemPrompt, settings, createNewThread, userId, addAssetToTree, getProjectContextString, updateSettings, userCoins]);
+     }, [input, loading, currentThreadId, threads, selectedModel, systemPrompt, settings, createNewThread, userId, addAssetToTree, getProjectContextString, updateSettings]);
 
   const copyToken = async () => {
     if (pluginToken) {
