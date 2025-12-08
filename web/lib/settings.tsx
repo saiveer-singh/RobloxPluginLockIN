@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 
-export type ThemePreset = 'dark' | 'light' | 'cyberpunk' | 'minimal' | 'ocean' | 'forest' | 'sunset' | 'midnight' | 'dracula' | 'nord';
+export type ThemePreset = 'dark' | 'light' | 'cyberprunk' | 'minimal' | 'ocean' | 'forest' | 'sunset' | 'midnight' | 'dracula' | 'nord';
 
 export interface ThemeColors {
   background: string;
@@ -57,6 +57,9 @@ export interface Settings {
   autoFocus: boolean;
   soundEnabled: boolean;
 
+  // Plugin
+  userid: string;
+
   // Usage Stats
   totalTokensUsed: number;
   tokenUsageHistory: TokenUsageEntry[];
@@ -78,6 +81,7 @@ const defaultSettings: Settings = {
   enterToSend: true,
   autoFocus: true,
   soundEnabled: false,
+  userid: '',
   totalTokensUsed: 0,
   tokenUsageHistory: [],
 };
@@ -113,7 +117,7 @@ const themePresets: Record<ThemePreset, ThemeColors> = {
     error: '#ef4444',
     warning: '#f59e0b',
   },
-  cyberpunk: {
+  cyberprunk: {
     background: '#0a0a0a',
     foreground: '#00ff88',
     primary: '#ff0080',

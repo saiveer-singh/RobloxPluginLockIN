@@ -87,7 +87,7 @@ function ChatInterface() {
 
 
     // Extract userId from session (can be undefined initially)
-    const userId = session?.user?.robloxId || undefined;
+    const userId = "testuser"; // Hardcode for testing
 
     // Models list
     const models = useMemo(() => ALL_MODELS, []);

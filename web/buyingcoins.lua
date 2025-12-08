@@ -17,10 +17,10 @@ local WEB_API_URL = "https://your-website-url.com" -- Replace with your actual w
 -- Developer Product IDs and their coin values
 local COIN_PRODUCTS = {
 	-- Replace these IDs with your actual Developer Product IDs
-	[123456789] = 100,  -- 100 Coins
-	[123456790] = 500,  -- 500 Coins
-	[123456791] = 1000, -- 1000 Coins
-	[123456792] = 2500, -- 2500 Coins
+	[3443806454] = 100,  -- 100 Coins
+	[3443806564] = 500,  -- 500 Coins
+	[3443806706] = 1000, -- 1000 Coins
+	[3474705330] = 2500, -- 2500 Coins
 	[123456793] = 10000 -- 10000 Coins
 }
 
@@ -29,7 +29,7 @@ local coinBalances = {}
 
 -- Initialize player's coin balance from Firebase
 local function initializePlayer(player)
-	local userId = tostring(player.UserId)
+	local userId = tostring(player.UserId) -- Use actual Roblox user ID
 	
 	-- Try to fetch from Firebase
 	local success, result = pcall(function()
@@ -86,15 +86,15 @@ end
 
 -- Add coins to player's balance
 local function addCoins(player, amount)
-	local userId = tostring(player.UserId)
+	local userId = tostring(player.UserId) -- Use actual Roblox user ID
 	local currentCoins = getCoins(player)
 	local newBalance = currentCoins + amount
-	
+
 	coinBalances[userId] = newBalance
-	
+
 	-- Sync to Firebase
 	syncCoinsToFirebase(userId, newBalance)
-	
+
 	return newBalance
 end
 
@@ -138,7 +138,7 @@ end)
 
 -- Clean up when player leaves
 Players.PlayerRemoving:Connect(function(player)
-	local userId = tostring(player.UserId)
+	local userId = tostring(player.UserId) -- Use actual Roblox user ID
 	coinBalances[userId] = nil
 end)
 

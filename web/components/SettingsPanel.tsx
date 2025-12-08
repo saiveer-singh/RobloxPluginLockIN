@@ -765,13 +765,34 @@ export function SettingsPanel({ isOpen, onClose, pluginToken, copyToken, regener
                       />
                     </div>
 
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-sm font-medium text-foreground">User ID</label>
+                        <p className="text-xs text-secondary">Your Roblox user ID for purchases and authentication</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={settings.userid}
+                        onChange={(e) => updateSettings({ userid: e.target.value })}
+                        className={`flex-1 px-3 py-2 bg-input border rounded text-sm text-foreground ${!settings.userid ? 'border-error' : 'border-border'}`}
+                        placeholder="Enter your Roblox user ID"
+                      />
+                      {!settings.userid && (
+                        <span className="text-xs text-error ml-1">Required</span>
+                      )}
+                    </div>
+
                     <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
                       <h4 className="text-sm font-semibold text-primary mb-2">How to Use</h4>
                       <ol className="text-xs text-primary/80 space-y-1">
                         <li>1. Copy the token above using the copy button</li>
                         <li>2. Open your Roblox plugin settings</li>
                         <li>3. Paste the token into the "AI Service Token" field</li>
-                    <li>4. Save settings and restart your plugin</li>
+                        <li>4. Enter your Roblox user ID above for purchases</li>
+                    <li>5. Save settings and restart your plugin</li>
                       </ol>
                     </div>
                   </div>
