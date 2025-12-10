@@ -26,15 +26,24 @@ local function storeVerificationCode(userId, code, displayName)
             timestamp = currentTick,
             expires = currentTick + CODE_LIFETIME
         }
-        
+
         warn("=== SERVER: STORING VERIFICATION CODE ===")
         warn("UserId:", userId)
         warn("Code:", code)
         warn("Expires:", data.expires)
         warn("URL:", url)
-        
-        local response = HttpService:PostAsync(url, HttpService:JSONEncode(data))
-        local decoded = HttpService:JSONDecode(response)
+
+        local requestData = {
+            Url = url,
+            Method = "PUT",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = HttpService:JSONEncode(data)
+        }
+
+        local response = HttpService:RequestAsync(requestData)
+        local decoded = HttpService:JSONDecode(response.Body)
         warn("Firebase response:", decoded)
         return decoded
     end)
