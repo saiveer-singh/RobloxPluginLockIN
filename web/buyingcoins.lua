@@ -12,6 +12,9 @@ local HttpService = game:GetService("HttpService")
 
 -- Configuration
 local FIREBASE_URL = "https://tissueai-coins-default-rtdb.firebaseio.com"
+-- IMPORTANT: use a database secret or custom auth token so Firebase accepts the request
+-- Generate one in Firebase console (Project Settings -> Service Accounts -> Database secrets)
+local FIREBASE_AUTH = "JndkJy6Vg3hMYskq6eUreOM8RquD4jBHJw0mrXAg"
 local WEB_API_URL = "https://your-website-url.com" -- Replace with your actual website URL
 
 -- Developer Product IDs and their coin values
@@ -27,17 +30,65 @@ local COIN_PRODUCTS = {
 -- Local cache of coin balances
 local coinBalances = {}
 
+-- Small helper to hit Firebase with proper auth and error logging
+local function requestFirebase(method, path, body)
+	local url = string.format("%s/%s.json?auth=%s", FIREBASE_URL, path, FIREBASE_AUTH)
+	local requestBody = body and HttpService:JSONEncode(body) or nil
+
+	print("=== FIREBASE REQUEST ===")
+	print("Method:", method)
+	print("URL:", url)
+	print("Body:", requestBody or "nil")
+
+	local success, response = pcall(function()
+		return HttpService:RequestAsync({
+			Url = url,
+			Method = method,
+			Headers = {
+				["Content-Type"] = "application/json"
+			},
+			Body = requestBody,
+		})
+	end)
+
+	if not success then
+		warn("=== FIREBASE ERROR ===")
+		warn("HTTP request to Firebase failed:", response)
+		warn("Make sure HTTP requests are enabled in Game Settings!")
+		warn("Make sure Firebase auth token is valid!")
+		return nil
+	end
+
+	print("=== FIREBASE RESPONSE ===")
+	print("Status Code:", response.StatusCode)
+	print("Success:", response.Success)
+	print("Response Body:", response.Body)
+
+	if not response.Success then
+		warn("=== FIREBASE REQUEST FAILED ===")
+		warn(string.format("Firebase %s %s failed (%s): %s", method, path, response.StatusCode, response.Body))
+		if response.StatusCode == 401 then
+			warn("ERROR: Invalid Firebase auth token!")
+		elseif response.StatusCode == 404 then
+			warn("ERROR: Firebase database URL not found!")
+		elseif response.StatusCode >= 500 then
+			warn("ERROR: Firebase server error!")
+		end
+		return nil
+	end
+
+	print("=== FIREBASE REQUEST SUCCESS ===")
+	return response.Body
+end
+
 -- Initialize player's coin balance from Firebase
 local function initializePlayer(player)
 	local userId = tostring(player.UserId) -- Use actual Roblox user ID
 	
 	-- Try to fetch from Firebase
-	local success, result = pcall(function()
-		local url = FIREBASE_URL .. "/users/" .. userId .. ".json"
-		return HttpService:GetAsync(url)
-	end)
-	
-	if success and result then
+	local result = requestFirebase("GET", "users/" .. userId)
+
+	if result then
 		local data = HttpService:JSONDecode(result)
 		if data and data.coins then
 			coinBalances[userId] = data.coins
@@ -49,32 +100,22 @@ local function initializePlayer(player)
 	else
 		-- Default to 0 if fetch fails
 		coinBalances[userId] = 0
-		warn("Failed to fetch coins for user " .. userId)
+		warn("Failed to fetch coins for user " .. userId .. " (check HTTP requests are enabled and auth token is valid)")
 	end
 end
 
 -- Sync coin balance to Firebase
 function syncCoinsToFirebase(userId, coins)
-	local success, err = pcall(function()
-		local url = FIREBASE_URL .. "/users/" .. userId .. ".json"
-		local data = {
-			userId = userId,
-			coins = coins,
-			lastUpdated = os.time() * 1000 -- Convert to milliseconds
-		}
-		
-		HttpService:RequestAsync({
-			Url = url,
-			Method = "PATCH",
-			Headers = {
-				["Content-Type"] = "application/json"
-			},
-			Body = HttpService:JSONEncode(data)
-		})
-	end)
-	
-	if not success then
-		warn("Failed to sync coins to Firebase:", err)
+	local data = {
+		userId = userId,
+		coins = coins,
+		lastUpdated = os.time() * 1000 -- Convert to milliseconds
+	}
+
+	local result = requestFirebase("PATCH", "users/" .. userId, data)
+
+	if not result then
+		warn("Failed to sync coins to Firebase for user", userId)
 	end
 end
 

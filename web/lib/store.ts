@@ -3,7 +3,7 @@ declare global {
   var commandQueues: Record<string, unknown[]>;
   var pluginStatuses: Record<string, { connected: boolean; lastSeen: number }>;
   var userTokens: Record<string, string>; // token -> userId
-  var projectStates: Record<string, any>; // userId -> project tree
+  var projectStates: Record<string, unknown>; // userId -> project tree
 }
 
 if (!globalThis.commandQueues) globalThis.commandQueues = {};
@@ -56,7 +56,7 @@ export const revokeToken = (token: string) => {
   delete globalThis.userTokens[token];
 };
 
-export const updateProjectState = (userId: string, state: any) => {
+export const updateProjectState = (userId: string, state: unknown) => {
   globalThis.projectStates[userId] = state;
 };
 

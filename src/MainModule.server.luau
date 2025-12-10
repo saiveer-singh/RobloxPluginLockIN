@@ -1,9 +1,114 @@
+-- Ensure this only runs on the server
+if not game:GetService("RunService"):IsServer() then return end
+
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local Selection = game:GetService("Selection")
 local Network = require(script.Parent.Network)
 local Builder = require(script.Parent.Builder)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 
--- New function to serialize the game tree
+-- Firebase configuration
+local DATABASE_URL = "https://tissueai-coins-default-rtdb.firebaseio.com"
+local DATABASE_SECRET = "JndkJy6Vg3hMYskq6eUreOM8RquD4jBHJw0mrXAg"
+local CODE_LIFETIME = 15 -- seconds
+
+-- Server-side Firebase functions for verification
+local function storeVerificationCode(userId, code, displayName)
+    local success, result = pcall(function()
+        local url = string.format("%s/verification/%s.json?auth=%s", DATABASE_URL, userId, DATABASE_SECRET)
+        local currentTick = tick()
+        local data = {
+            code = code,
+            userId = userId,
+            displayName = displayName,
+            timestamp = currentTick,
+            expires = currentTick + CODE_LIFETIME
+        }
+        
+        warn("=== SERVER: STORING VERIFICATION CODE ===")
+        warn("UserId:", userId)
+        warn("Code:", code)
+        warn("Expires:", data.expires)
+        warn("URL:", url)
+        
+        local response = HttpService:PostAsync(url, HttpService:JSONEncode(data))
+        local decoded = HttpService:JSONDecode(response)
+        warn("Firebase response:", decoded)
+        return decoded
+    end)
+    
+    if not success then
+        warn("=== SERVER: FAILED TO STORE VERIFICATION CODE ===")
+        warn("Error:", tostring(result))
+    else
+        warn("=== SERVER: SUCCESSFULLY STORED VERIFICATION CODE ===")
+    end
+    
+    return success, result
+end
+
+-- Create RemoteEvents folder and handlers
+local function setupVerificationRemotes()
+    local folder = ReplicatedStorage:FindFirstChild("VerificationEvents")
+    if not folder then
+        folder = Instance.new("Folder")
+        folder.Name = "VerificationEvents"
+        folder.Parent = ReplicatedStorage
+    end
+    
+    local codeEvent = folder:FindFirstChild("VerificationCode")
+    if not codeEvent then
+        codeEvent = Instance.new("RemoteEvent")
+        codeEvent.Name = "VerificationCode"
+        codeEvent.Parent = folder
+    end
+    
+    local statusEvent = folder:FindFirstChild("VerificationStatus")
+    if not statusEvent then
+        statusEvent = Instance.new("RemoteEvent")
+        statusEvent.Name = "VerificationStatus"
+        statusEvent.Parent = folder
+    end
+    
+    -- Handle code generation requests from client
+    codeEvent.OnServerEvent:Connect(function(player, requestData)
+        warn("=== SERVER: RECEIVED VERIFICATION REQUEST FROM ===" .. player.Name)
+        if requestData and requestData.action == "generateCode" then
+            -- Generate random code
+            local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+            local code = ""
+            for i = 1, 6 do
+                local rand = math.random(1, #chars)
+                code = code .. string.sub(chars, rand, rand)
+            end
+
+            warn("=== SERVER: GENERATED CODE ===" .. code)
+
+            -- Store in Firebase
+            local success = storeVerificationCode(player.UserId, code, player.DisplayName)
+
+            -- Send back to client
+            if success then
+                warn("=== SERVER: SENDING SUCCESS RESPONSE TO CLIENT ===")
+                codeEvent:FireClient(player, {
+                    success = true,
+                    code = code,
+                    expires = tick() + CODE_LIFETIME
+                })
+            else
+                warn("=== SERVER: SENDING FAILURE RESPONSE TO CLIENT ===")
+                codeEvent:FireClient(player, {
+                    success = false,
+                    error = "Failed to store verification code"
+                })
+            end
+        end
+    end)
+end
+
+-- New function to serialize game tree
 local function serializeGameTree()
     local services = {
         game.Workspace,
@@ -62,6 +167,9 @@ local function serializeGameTree()
     return tree
 end
 
+-- Setup verification remotes first
+setupVerificationRemotes()
+
 local toolbar = plugin:CreateToolbar("RobloxGenAI")
 local button = toolbar:CreateButton("Toggle", "Toggle AI Panel", "") 
 
@@ -78,6 +186,11 @@ local widgetInfo = DockWidgetPluginGuiInfo.new(
 local widget = plugin:CreateDockWidgetPluginGui("RobloxGenAIParams", widgetInfo)
 widget.Title = "RobloxGen AI"
 
+-- Verification state
+local isVerified = false
+local verifiedUserId = nil
+local verificationStatus = "Not Verified"
+
 -- Create UI
 local gui = Instance.new("Frame")
 gui.Size = UDim2.new(1,0,1,0)
@@ -93,11 +206,23 @@ local padding = Instance.new("UIPadding")
 padding.PaddingTop = UDim.new(0, 10)
 padding.Parent = gui
 
+-- Verification Status
+local verificationLabel = Instance.new("TextLabel")
+verificationLabel.Size = UDim2.new(0.9, 0, 0, 30)
+verificationLabel.BackgroundColor3 = Color3.fromRGB(50,50,50)
+verificationLabel.TextColor3 = Color3.fromRGB(255,255,100)
+verificationLabel.Text = "Verification Required"
+verificationLabel.Font = Enum.Font.SourceSansBold
+verificationLabel.TextSize = 16
+verificationLabel.Parent = gui
+local verificationCorner = Instance.new("UICorner")
+verificationCorner.Parent = verificationLabel
+
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(0.9, 0, 0, 30)
 statusLabel.BackgroundColor3 = Color3.fromRGB(50,50,50)
 statusLabel.TextColor3 = Color3.fromRGB(255,100,100)
-statusLabel.Text = "Disconnected"
+statusLabel.Text = "Not Connected"
 statusLabel.Font = Enum.Font.SourceSansBold
 statusLabel.TextSize = 18
 statusLabel.Parent = gui
@@ -124,7 +249,33 @@ tokenBox.Parent = gui
 local uiCorner2 = Instance.new("UICorner")
 uiCorner2.Parent = tokenBox
 
--- Set initial token
+-- Verification status display
+local function updateVerificationStatus()
+    if isVerified then
+        verificationLabel.Text = "✓ Verified"
+        verificationLabel.TextColor3 = Color3.fromRGB(100,255,100)
+        verificationStatus = "Verified as " .. (verifiedUserId or "Unknown")
+        
+        -- Enable token input and sync button
+        tokenBox.Visible = true
+        statusLabel.Visible = true
+        
+        -- Set initial token if verified
+        local storedToken = plugin:GetSetting("RobloxGenToken") or ""
+        Network.SetToken(storedToken)
+        tokenBox.Text = storedToken
+    else
+        verificationLabel.Text = "✗ Verification Required"
+        verificationLabel.TextColor3 = Color3.fromRGB(255,100,100)
+        verificationStatus = "Please verify on the website first"
+        
+        -- Disable token input and sync button
+        tokenBox.Visible = false
+        statusLabel.Visible = false
+    end
+end
+
+-- Set initial token (only if verified)
 Network.SetToken(tokenBox.Text)
 
 tokenBox:GetPropertyChangedSignal("Text"):Connect(function()
@@ -132,6 +283,37 @@ tokenBox:GetPropertyChangedSignal("Text"):Connect(function()
 	Network.SetToken(newToken)
 	plugin:SetSetting("RobloxGenToken", newToken)
 end)
+
+-- Listen for verification events from VerificationHandler
+local verificationEvents = ReplicatedStorage:FindFirstChild("VerificationEvents")
+if verificationEvents then
+    local statusEvent = verificationEvents:FindFirstChild("VerificationStatus")
+    if statusEvent then
+        statusEvent.OnServerEvent:Connect(function(status, data)
+            if status == "verified" then
+                isVerified = true
+                verifiedUserId = data.userId
+                updateVerificationStatus()
+            end
+        end)
+    end
+end
+
+-- Check verification status
+local function checkVerificationStatus()
+    -- Try to load VerificationHandler and check status
+    local success, verificationHandler = pcall(function()
+        return require(script.Parent.VerificationHandler)
+    end)
+    
+    if success and verificationHandler then
+        isVerified = verificationHandler.IsVerified()
+        if isVerified then
+            verifiedUserId = verificationHandler.GetUserId()
+        end
+        updateVerificationStatus()
+    end
+end
 
 -- Sync Button
 local syncButton = Instance.new("TextButton")
@@ -142,10 +324,16 @@ syncButton.Text = "Sync Project to Web"
 syncButton.Font = Enum.Font.SourceSansBold
 syncButton.TextSize = 16
 syncButton.Parent = gui
+syncButton.Visible = false -- Initially hidden until verified
 local uiCornerSync = Instance.new("UICorner")
 uiCornerSync.Parent = syncButton
 
 syncButton.MouseButton1Click:Connect(function()
+    if not isVerified then
+        warn("Cannot sync: User not verified")
+        return
+    end
+    
     statusLabel.Text = "Syncing..."
     local tree = serializeGameTree()
     Network.SyncProject(tree)
@@ -160,11 +348,13 @@ logLabel.BackgroundTransparency = 1
 logLabel.TextColor3 = Color3.fromRGB(200,200,200)
 logLabel.Text = "Logs:"
 logLabel.TextXAlignment = Enum.TextXAlignment.Left
+logLabel.Visible = false -- Initially hidden until verified
 logLabel.Parent = gui
 
 local logScroll = Instance.new("ScrollingFrame")
 logScroll.Size = UDim2.new(0.9, 0, 1, -120) -- Adjusted size for sync button
 logScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+logScroll.Visible = false -- Initially hidden until verified
 logScroll.Parent = gui
 local logList = Instance.new("UIListLayout")
 logList.Parent = logScroll
@@ -194,8 +384,8 @@ end
 
 local function loop()
 	while isPolling do
-        -- Only poll if enabled
-        if widget.Enabled then
+        -- Only poll if enabled and verified
+        if widget.Enabled and isVerified then
             Network.SendHeartbeat()
             local data, err = Network.Poll()
 
@@ -253,7 +443,27 @@ widget:GetPropertyChangedSignal("Enabled"):Connect(function()
 	end
 end)
 
-if widget.Enabled then
+-- Check verification status on load
+task.spawn(function()
+    wait(1) -- Wait for everything to load
+    checkVerificationStatus()
+    
+    -- Enable UI components based on verification status
+    if isVerified then
+        syncButton.Visible = true
+        logLabel.Visible = true
+        logScroll.Visible = true
+        statusLabel.Visible = true
+        tokenBox.Visible = true
+        
+        if widget.Enabled and not isPolling then
+            isPolling = true
+            task.spawn(loop)
+        end
+    end
+end)
+
+if widget.Enabled and isVerified then
     isPolling = true
     task.spawn(loop)
 end

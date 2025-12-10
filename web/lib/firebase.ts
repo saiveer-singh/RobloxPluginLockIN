@@ -1,17 +1,9 @@
-import admin from 'firebase-admin';
+// Firebase Realtime Database REST API implementation
+import { COIN_RATIOS } from './models';
+import type { ModelProvider } from './models';
 
-// Initialize Firebase Admin
-let app: admin.app.App;
-
-try {
-  app = admin.app();
-} catch {
-  app = admin.initializeApp({
-    databaseURL: 'https://tissueai-coins-default-rtdb.firebaseio.com/',
-  });
-}
-
-const db = admin.database();
+const DATABASE_URL = 'https://tissueai-coins-default-rtdb.firebaseio.com';
+const DATABASE_SECRET = 'JndkJy6Vg3hMYskq6eUreOM8RquD4jBHJw0mrXAg';
 
 export interface UserCoins {
   userId: string;
@@ -24,22 +16,41 @@ export interface UserCoins {
  */
 export async function getUserCoins(userId: string): Promise<number> {
   try {
-    const snapshot = await db.ref(`users/${userId}`).once('value');
-    const data = snapshot.val();
+    console.log('=== FIREBASE GET REQUEST ===');
+    console.log('UserId:', userId);
+    console.log('URL:', `${DATABASE_URL}/users/${userId}.json?auth=${DATABASE_SECRET}`);
     
+    const response = await fetch(`${DATABASE_URL}/users/${userId}.json?auth=${DATABASE_SECRET}`);
+    console.log('Response status:', response.status);
+    console.log('Response ok:', response.ok);
+    
+    const data = await response.json();
+    console.log('Response data:', data);
+
     if (!data) {
+      console.log('No data found, initializing new user with 0 coins');
       // Initialize new user with 0 coins
-      await db.ref(`users/${userId}`).set({
-        userId,
-        coins: 0,
-        lastUpdated: Date.now()
+      const initResponse = await fetch(`${DATABASE_URL}/users/${userId}.json?auth=${DATABASE_SECRET}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          coins: 0,
+          lastUpdated: Date.now()
+        })
       });
+      console.log('Init response status:', initResponse.status);
+      console.log('Init response ok:', initResponse.ok);
       return 0;
     }
-    
-    return data.coins || 0;
+
+    const coins = data.coins || 0;
+    console.log('User coins found:', coins);
+    return coins;
   } catch (error) {
+    console.error('=== FIREBASE GET ERROR ===');
     console.error('Error fetching user coins:', error);
+    console.error('Make sure Firebase URL is correct and auth token is valid');
     throw new Error('Failed to fetch coin balance');
   }
 }
@@ -49,12 +60,45 @@ export async function getUserCoins(userId: string): Promise<number> {
  */
 export async function updateUserCoins(userId: string, coins: number): Promise<void> {
   try {
-    await db.ref(`users/${userId}`).update({
-      coins,
-      lastUpdated: Date.now()
+    console.log('=== FIREBASE UPDATE REQUEST ===');
+    console.log('UserId:', userId);
+    console.log('Coins:', coins);
+    console.log('URL:', `${DATABASE_URL}/users/${userId}.json?auth=${DATABASE_SECRET}`);
+    
+    const response = await fetch(`${DATABASE_URL}/users/${userId}.json?auth=${DATABASE_SECRET}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        coins,
+        lastUpdated: Date.now()
+      })
     });
+
+    console.log('Update response status:', response.status);
+    console.log('Update response ok:', response.ok);
+
+    const responseText = await response.text();
+    console.log('Update response text:', responseText);
+
+    if (!response.ok) {
+      console.error('=== FIREBASE UPDATE ERROR ===');
+      console.error(`Firebase update failed: ${response.status} ${response.statusText} - ${responseText}`);
+      if (response.status === 401) {
+        console.error('ERROR: Invalid Firebase auth token!');
+      } else if (response.status === 404) {
+        console.error('ERROR: Firebase database URL not found!');
+      } else if (response.status >= 500) {
+        console.error('ERROR: Firebase server error!');
+      }
+      throw new Error(`Firebase update failed: ${response.status} ${response.statusText} - ${responseText}`);
+    }
+    
+    console.log('=== FIREBASE UPDATE SUCCESS ===');
   } catch (error) {
+    console.error('=== FIREBASE UPDATE ERROR ===');
     console.error('Error updating user coins:', error);
+    console.error('Make sure Firebase URL is correct and auth token is valid');
     throw new Error('Failed to update coin balance');
   }
 }
@@ -64,11 +108,19 @@ export async function updateUserCoins(userId: string, coins: number): Promise<vo
  */
 export async function addCoins(userId: string, amount: number): Promise<number> {
   try {
+    console.log('=== ADDING COINS ===');
+    console.log('UserId:', userId);
+    console.log('Amount:', amount);
+    
     const currentCoins = await getUserCoins(userId);
     const newBalance = currentCoins + amount;
+    console.log('Current coins:', currentCoins);
+    console.log('New balance:', newBalance);
+    
     await updateUserCoins(userId, newBalance);
     return newBalance;
   } catch (error) {
+    console.error('=== ADD COINS ERROR ===');
     console.error('Error adding coins:', error);
     throw new Error('Failed to add coins');
   }
@@ -80,25 +132,52 @@ export async function addCoins(userId: string, amount: number): Promise<number> 
  */
 export async function deductCoins(userId: string, amount: number): Promise<boolean> {
   try {
+    console.log('=== DEDUCTING COINS ===');
+    console.log('UserId:', userId);
+    console.log('Amount:', amount);
+    
     const currentCoins = await getUserCoins(userId);
+    console.log('Current coins:', currentCoins);
     
     if (currentCoins < amount) {
+      console.log('Insufficient coins!');
       return false; // Insufficient coins
     }
     
     const newBalance = currentCoins - amount;
+    console.log('New balance after deduction:', newBalance);
     await updateUserCoins(userId, newBalance);
     return true;
   } catch (error) {
+    console.error('=== DEDUCT COINS ERROR ===');
     console.error('Error deducting coins:', error);
     throw new Error('Failed to deduct coins');
   }
 }
 
 /**
- * Calculate coin cost based on token usage
- * Default rate: 1 coin per 1000 tokens
+ * Calculate coin cost based on token usage and model
+ * Uses model-specific coin ratios for more accurate pricing
  */
-export function calculateCoinCost(tokens: number, rate: number = 0.001): number {
-  return Math.ceil(tokens * rate);
+export function calculateCoinCost(tokens: number, model: ModelProvider = 'gpt-5-nano'): number {
+  const ratio = COIN_RATIOS[model] || 1.0; // Default to 1 coin per 1k tokens
+  const coinsNeeded = (tokens / 1000) * ratio;
+  return Math.ceil(coinsNeeded);
+}
+
+/**
+ * Get coin ratio for a specific model (tokens per coin)
+ */
+export function getTokensPerCoin(model: ModelProvider): number {
+  const ratio = COIN_RATIOS[model] || 1.0;
+  return Math.ceil(1000 / ratio); // Tokens per coin
+}
+
+/**
+ * Get cost description for a model
+ */
+export function getCostDescription(model: ModelProvider): string {
+  const ratio = COIN_RATIOS[model] || 1.0;
+  const tokensPerCoin = Math.ceil(1000 / ratio);
+  return `1 coin ≈ ${tokensPerCoin.toLocaleString()} tokens`;
 }

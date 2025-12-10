@@ -1,22 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Folder, File, ChevronRight, ChevronDown, Box, Code, Zap, Image as ImageIcon, 
-  Type, Globe, Users, Sun, Database, Server, HardDrive, LayoutTemplate, 
-  Briefcase, User, Flag, Music, MessageSquare, Boxes, FileCode, Radio, Link, 
-  Monitor, Square, Scroll, Lightbulb, Sparkles, Activity, Layers, ArrowDownToLine,
-  RefreshCw, Hash, Variable, ToggleLeft, Anchor, Link2, Play, Settings, 
-  Cloud, Map, Eye, MousePointer, Gamepad2, Keyboard, Smartphone, Package,
-  AlertCircle, CheckCircle, HelpCircle, Info, Terminal, Command, 
-  AlignLeft, AlignCenter, AlignRight, Grid, List, Columns, 
-  CreditCard, DollarSign, ShoppingBag, Tag, Video, Camera, Aperture,
-  Component, Cpu, CircuitBoard, Network, Wifi, Bluetooth,
-  Lock, Unlock, Shield, Key, EyeOff, Bell, BellOff,
-  Calendar, Clock, Timer, Watch, MapPin, Navigation,
-  CloudRain, CloudSnow, CloudLightning, CloudDrizzle,
-  Thermometer, Droplets, Wind, Umbrella,
-  Speaker, Mic, Volume2, VolumeX, Headphones,
-  Book, Bookmark, FileText, FilePlus, FileMinus, Film
-} from 'lucide-react';
+import { Folder, File, ChevronRight, ChevronDown, Box, Boxes, FileCode, Terminal, Briefcase, Monitor, Square, Zap, Activity, User, MousePointer, RefreshCw, Users, MessageSquare, Globe, Sun, Component, ArrowDownToLine, Layers, Server, HardDrive, LayoutTemplate, Flag, Music, Mic, Scroll, ImageIcon, Type, Video, Camera, Grid, List, Hash, ToggleLeft, Anchor, Link2, Cloud, EyeOff, Lightbulb, Sparkles, Play, Gamepad2, Film, Speaker, Settings, ShoppingBag, MapPin, Link, AlignCenter } from 'lucide-react';
 import { useProject, ProjectAsset } from '@/lib/project-context';
 
 // Fallback icons for those not imported/mapped

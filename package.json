@@ -1,5 +1,16 @@
 {
+  "name": "robloxpluginlockin",
+  "private": true,
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "start": "npm run start -w web",
+    "lint": "npm run lint -w web"
+  },
   "dependencies": {
-    "lucide-react": "^0.555.0"
+    "@vercel/analytics": "^1.6.1"
   }
 }

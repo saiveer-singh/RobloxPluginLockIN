@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
 
 // Simple asset type for the explorer
@@ -12,15 +12,73 @@ export interface ProjectAsset {
   properties?: Record<string, string>;
 }
 
+interface AIAsset {
+  ClassName?: string;
+  Properties?: Record<string, string>;
+  Children?: AIAsset[];
+}
+
+interface AssetData {
+  assets: AIAsset[];
+}
+
+export interface ProjectVersion {
+  id: string;
+  name: string;
+  description?: string;
+  timestamp: number;
+  projectTree: ProjectAsset[];
+  messageCount: number;
+}
+
 interface ProjectContextType {
   projectTree: ProjectAsset[];
-  addAssetToTree: (assetData: any) => void;
+  addAssetToTree: (assetData: AssetData) => void;
   clearProject: () => void;
   getProjectContextString: () => string;
   syncFromStudio: () => Promise<void>;
+  // Version control
+  versions: ProjectVersion[];
+  saveVersion: (name: string, description?: string) => void;
+  restoreVersion: (versionId: string) => void;
+  deleteVersion: (versionId: string) => void;
+  currentMessageCount: number;
+  setCurrentMessageCount: (count: number) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+
+// Recursively build a text representation of the tree for the AI context
+const buildContextString = (nodes: ProjectAsset[], depth: number = 0): string => {
+  let result = "";
+  const indent = "  ".repeat(depth);
+
+  for (const node of nodes) {
+    result += `${indent}- [${node.className}] ${node.name}`;
+
+    if (node.properties) {
+      const props = [];
+      if (node.properties.Position) props.push(`Pos: ${node.properties.Position}`);
+      if (node.properties.Size) props.push(`Size: ${node.properties.Size}`);
+      if (node.properties.Color) props.push(`Color: ${node.properties.Color}`);
+
+      if (props.length > 0) {
+        result += ` { ${props.join(', ')} }`;
+      }
+
+      // Include Script Source for context awareness (essential for editing)
+      if ((node.className.includes('Script') || node.className === 'ModuleScript') && node.properties.Source) {
+         result += `\n${indent}  Source:\n\`\`\`lua\n${node.properties.Source}\n\`\`\``;
+      }
+    }
+    result += "\n";
+
+    if (node.children.length > 0) {
+      result += buildContextString(node.children, depth + 1);
+    }
+  }
+  return result;
+};
 
 // ... (DEFAULT_SERVICES constant remains same)
 
@@ -44,7 +102,7 @@ const DEFAULT_SERVICES: ProjectAsset[] = [
 ];
 
 // Helper to convert the AI's asset format to our tree format
-function convertAIAssetToNode(aiAsset: any): ProjectAsset {
+function convertAIAssetToNode(aiAsset: AIAsset): ProjectAsset {
   const node: ProjectAsset = {
     id: Math.random().toString(36).substr(2, 9),
     name: aiAsset.Properties?.Name || aiAsset.ClassName || 'Unknown',
@@ -63,7 +121,6 @@ function convertAIAssetToNode(aiAsset: any): ProjectAsset {
 // Heuristic to determine where an asset should go
 function getTargetServiceId(asset: ProjectAsset): string {
   const cls = asset.className;
-  const name = asset.name.toLowerCase();
 
   if (cls === 'Script') return 'serverscriptservice';
   if (cls === 'LocalScript') return 'starterplayerscripts'; // Inside StarterPlayer
@@ -109,8 +166,55 @@ function mergeAssets(existing: ProjectAsset[], incoming: ProjectAsset[]) {
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const [projectTree, setProjectTree] = useState<ProjectAsset[]>(DEFAULT_SERVICES);
+  const [versions, setVersions] = useState<ProjectVersion[]>([]);
+  const [currentMessageCount, setCurrentMessageCount] = useState(0);
 
-  const addAssetToTree = useCallback((assetData: any) => {
+  // Load versions from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('robloxgen-project-versions');
+        if (saved) {
+          setVersions(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error('Failed to load project versions:', e);
+      }
+    }
+  }, []);
+
+  // Save versions to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('robloxgen-project-versions', JSON.stringify(versions));
+    }
+  }, [versions]);
+
+  const saveVersion = useCallback((name: string, description?: string) => {
+    const newVersion: ProjectVersion = {
+      id: Date.now().toString(),
+      name,
+      description,
+      timestamp: Date.now(),
+      projectTree: JSON.parse(JSON.stringify(projectTree)),
+      messageCount: currentMessageCount,
+    };
+    setVersions(prev => [newVersion, ...prev]);
+  }, [projectTree, currentMessageCount]);
+
+  const restoreVersion = useCallback((versionId: string) => {
+    const version = versions.find(v => v.id === versionId);
+    if (version) {
+      setProjectTree(version.projectTree);
+      setCurrentMessageCount(version.messageCount);
+    }
+  }, [versions]);
+
+  const deleteVersion = useCallback((versionId: string) => {
+    setVersions(prev => prev.filter(v => v.id !== versionId));
+  }, []);
+
+  const addAssetToTree = useCallback((assetData: AssetData) => {
     if (assetData && Array.isArray(assetData.assets)) {
       const newAssets = assetData.assets.map(convertAIAssetToNode);
       
@@ -163,49 +267,29 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         // To be safe, we might want to validate/merge, but replacing is "Sync".
         setProjectTree(data.tree);
       }
-    } catch (e) {
-      console.error("Failed to sync from studio:", e);
+    } catch (error) {
+      console.error('Failed to sync from studio:', error);
     }
-  }, [session?.user?.robloxId]);
-
-  // Recursively build a text representation of the tree for the AI context
-  const buildContextString = (nodes: ProjectAsset[], depth: number = 0): string => {
-    let result = "";
-    const indent = "  ".repeat(depth);
-    
-    for (const node of nodes) {
-      result += `${indent}- [${node.className}] ${node.name}`;
-      
-      if (node.properties) {
-        const props = [];
-        if (node.properties.Position) props.push(`Pos: ${node.properties.Position}`);
-        if (node.properties.Size) props.push(`Size: ${node.properties.Size}`);
-        if (node.properties.Color) props.push(`Color: ${node.properties.Color}`);
-        
-        if (props.length > 0) {
-          result += ` { ${props.join(', ')} }`;
-        }
-
-        // Include Script Source for context awareness (essential for editing)
-        if ((node.className.includes('Script') || node.className === 'ModuleScript') && node.properties.Source) {
-           result += `\n${indent}  Source:\n\`\`\`lua\n${node.properties.Source}\n\`\`\``;
-        }
-      }
-      result += "\n";
-      
-      if (node.children.length > 0) {
-        result += buildContextString(node.children, depth + 1);
-      }
-    }
-    return result;
-  };
+  }, [session]);
 
   const getProjectContextString = useCallback(() => {
     return "Current Project Hierarchy:\n" + buildContextString(projectTree);
   }, [projectTree]);
 
   return (
-    <ProjectContext.Provider value={{ projectTree, addAssetToTree, clearProject, getProjectContextString, syncFromStudio }}>
+    <ProjectContext.Provider value={{
+      projectTree,
+      addAssetToTree,
+      clearProject,
+      getProjectContextString,
+      syncFromStudio,
+      versions,
+      saveVersion,
+      restoreVersion,
+      deleteVersion,
+      currentMessageCount,
+      setCurrentMessageCount
+    }}>
       {children}
     </ProjectContext.Provider>
   );

@@ -603,8 +603,8 @@ export function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animat
   return bestType as 'scripting' | 'vfx' | 'animation' | 'modeling';
 }
 
-import type { ModelProvider, ModelConfig } from './models';
 import { MODEL_CONFIGS } from './models';
+import { createOpenAI } from '@ai-sdk/openai';
 
 
 
@@ -649,13 +649,13 @@ export function cleanJson(text: string): string {
     // Test if it's valid JSON
     JSON.parse(cleaned);
     return cleaned;
-  } catch (e) {
+  } catch {
     // If parsing fails, try to fix common issues
     console.log('JSON parse failed, attempting to fix...');
-    
+
     // Remove trailing commas
     let fixed = cleaned.replace(/,(\s*[}\]])/g, '$1');
-    
+
     // Try to find JSON object with better regex
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -663,12 +663,12 @@ export function cleanJson(text: string): string {
       // Remove trailing commas in the matched content
       fixed = fixed.replace(/,(\s*[}\]])/g, '$1');
     }
-    
+
     // Try parsing the fixed version
     try {
       JSON.parse(fixed);
       return fixed;
-    } catch (e2) {
+    } catch {
       // Return the best attempt
       return fixed;
     }
@@ -714,8 +714,114 @@ export async function generateContent(prompt: string, model: string, systemPromp
   } else if (config.provider === 'opencode') {
     apiKey = currentApiKeys.OPENCODE_API_KEY;
     endpoint = 'https://opencode.ai/zen/v1/chat/completions';
+  } else if (config.provider === 'zhipuai') {
+    // Zhipu AI model - use direct fetch for now
+    const zhipuApiKey = currentApiKeys.ZHIPUAI_API_KEY || '995db4e88908451389d7d1b28cb1d24b.V6cm1j0LfojRgjDk';
+    
+    const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${zhipuApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.modelId,
+        messages: [
+          { role: 'system', content: fullSystemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Zhipu AI API Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content || '';
+    
+    let content;
+    try {
+      const cleanedContent = cleanJson(rawContent);
+      content = JSON.parse(cleanedContent);
+    } catch (e) {
+      console.error('Failed to parse Zhipu AI response:', e);
+      throw new Error(`Failed to parse Zhipu AI response: ${(e as Error).message}`);
+    }
+
+    const duration = (Date.now() - startTime) / 1000;
+    const tokensUsed = data.usage?.total_tokens || 0;
+    const tokensPerSecond = tokensUsed / duration;
+
+    return {
+      content,
+      model,
+      tokensUsed,
+      tokensPerSecond,
+      duration,
+      requestType,
+    };
+  } else if (config.provider === 'gemini') {
+    // Gemini API - use hardcoded API key
+    const geminiApiKey = currentApiKeys.GEMINI_API_KEY;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `${fullSystemPrompt}\n\n${prompt}`
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 4000,
+          topK: 40,
+          topP: 0.95,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+      const rawContent = data.candidates[0].content.parts[0].text.trim();
+
+      let content;
+      try {
+        const cleanedContent = cleanJson(rawContent);
+        content = JSON.parse(cleanedContent);
+      } catch (e) {
+        console.error('Failed to parse Gemini response:', e);
+        throw new Error(`Failed to parse Gemini response: ${(e as Error).message}`);
+      }
+
+      const duration = (Date.now() - startTime) / 1000;
+      const tokensUsed = data.usageMetadata?.totalTokenCount || 0;
+      const tokensPerSecond = tokensUsed / duration;
+
+      return {
+        content,
+        model,
+        tokensUsed,
+        tokensPerSecond,
+        duration,
+        requestType,
+      };
+    } else {
+      throw new Error('No content returned from Gemini API');
+    }
   } else {
-    apiKey = currentApiKeys.OPENAI_API_KEY;
+    throw new Error(`Unknown model: ${model}`);
   }
 
   if (!apiKey) {

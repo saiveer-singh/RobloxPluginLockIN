@@ -1,13 +1,27 @@
 import { NextResponse } from 'next/server';
 
+type ApiKeys = {
+  OPENCODE_API_KEY?: string;
+  OPENROUTER_API_KEY?: string;
+};
+
+type TestResult = {
+  opencodeKeyFromEnv: string;
+  openrouterKeyFromEnv: string;
+  opencodeKeyFromFile: string;
+  openrouterKeyFromFile: string;
+  workingDirectory: string;
+  opencodeApiTest?: string;
+};
+
 export async function GET() {
   try {
     // Test OpenCode API
     const opencodeKey = process.env.OPENCODE_API_KEY;
     const openrouterKey = process.env.OPENROUTER_API_KEY;
-    
+
     // Try to read from file
-    let fileKeys = {};
+    let fileKeys: ApiKeys = {};
     try {
       const fs = await import('fs');
       const path = await import('path');
@@ -20,16 +34,16 @@ export async function GET() {
       console.error('Error reading api-keys.json:', e);
     }
 
-    let result: any = {
+    let result: TestResult = {
       opencodeKeyFromEnv: opencodeKey ? 'Present' : 'Missing',
       openrouterKeyFromEnv: openrouterKey ? 'Present' : 'Missing',
-      opencodeKeyFromFile: (fileKeys as any).OPENCODE_API_KEY ? 'Present' : 'Missing',
-      openrouterKeyFromFile: (fileKeys as any).OPENROUTER_API_KEY ? 'Present' : 'Missing',
+      opencodeKeyFromFile: fileKeys.OPENCODE_API_KEY ? 'Present' : 'Missing',
+      openrouterKeyFromFile: fileKeys.OPENROUTER_API_KEY ? 'Present' : 'Missing',
       workingDirectory: process.cwd(),
     };
 
     // Test a simple API call
-    const testApiKey = opencodeKey || (fileKeys as any).OPENCODE_API_KEY;
+    const testApiKey = opencodeKey || fileKeys.OPENCODE_API_KEY;
     if (testApiKey) {
       try {
         const testResponse = await fetch('https://opencode.ai/zen/v1/models', {

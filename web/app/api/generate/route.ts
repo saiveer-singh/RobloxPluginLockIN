@@ -76,6 +76,21 @@ export async function POST(req: Request) {
           console.error('Error reading API key from file:', e);
         }
       }
+    } else if (config.provider === 'zhipuai') {
+      apiKey = process.env.ZHIPUAI_API_KEY;
+      if (!apiKey) {
+        try {
+          const fs = await import('fs');
+          const path = await import('path');
+          const keysPath = path.join(process.cwd(), 'web', 'api-keys.json');
+          if (fs.existsSync(keysPath)) {
+            const fileKeys = JSON.parse(fs.readFileSync(keysPath, 'utf8'));
+            apiKey = fileKeys.ZHIPUAI_API_KEY;
+          }
+        } catch (e) {
+          console.error('Error reading Zhipu AI API key from file:', e);
+        }
+      }
     }
 
     if (!apiKey) {
@@ -98,6 +113,11 @@ export async function POST(req: Request) {
         apiKey,
         baseURL: 'https://openrouter.ai/api/v1',
       });
+    } else if (config.provider === 'zhipuai') {
+      openai = createOpenAI({
+        apiKey,
+        baseURL: 'https://open.bigmodel.cn/api/paas/v4',
+      });
     } else {
       openai = createOpenAI({
         apiKey,
@@ -108,7 +128,7 @@ export async function POST(req: Request) {
     // Get full system prompt
     const fullSystemPrompt = getSystemPrompt(requestType, systemPrompt);
 
-    if (config.provider === 'opencode') {
+    if (config.provider === 'opencode' || config.provider === 'zhipuai') {
       // Use non-streaming for opencode as it may not support OpenAI-compatible streaming
       console.log('Using non-streaming for opencode model:', config.modelId);
       try {
@@ -200,7 +220,7 @@ export async function POST(req: Request) {
              }
            ],
            temperature: 0.7,
-            onFinish: async ({ text, usage, finishReason }) => {
+            onFinish: async ({ text, usage }) => {
             // Parse and queue the result for the plugin
             console.log('Stream finished. Raw AI response length:', text.length);
             console.log('Raw AI response (first 500 chars):', text.substring(0, 500));

@@ -2,7 +2,7 @@
 import React from 'react';
 
 // Model icon component that returns appropriate brand icons/logos
-export function ModelIcon({ modelId, className = "w-4 h-4" }: { modelId: string; className?: string }) {
+export function ModelIcon({ modelId, className = "w-4 h-4" }: { modelId: string; className?: string }): React.JSX.Element {
   const lowerId = modelId.toLowerCase();
   
   // OpenAI models - Modern ChatGPT-style icon
