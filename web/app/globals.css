@@ -19,6 +19,9 @@
   /* Font and animation variables */
   --font-size-base: 16px;
   --animation-duration: 0.2s;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-code: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --line-height-base: 1.5;
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -46,9 +49,19 @@
 body {
   background: var(--val-background);
   color: var(--val-foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
   font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
   transition: background-color var(--animation-duration), color var(--animation-duration);
+}
+
+/* Code elements use code font */
+code,
+pre,
+kbd,
+samp,
+.font-mono {
+  font-family: var(--font-code);
 }
 
 /* Ensure form elements have correct base contrast even without utility classes */
@@ -1316,7 +1329,7 @@ html {
    ACCESSIBILITY IMPROVEMENTS
    ======================================== */
 
-/* Reduced motion support */
+/* Reduced motion support - system preference */
 @media (prefers-reduced-motion: reduce) {
 
   *,
@@ -1329,13 +1342,46 @@ html {
   }
 }
 
-/* High contrast mode - enhanced focus */
+/* Reduced motion - user setting */
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* High contrast mode - enhanced focus and borders */
 .high-contrast-mode *:focus {
   outline: 3px solid var(--val-primary) !important;
   outline-offset: 2px !important;
 }
 
-/* Focus visible for keyboard navigation */
+.high-contrast-mode {
+  --val-border: #888888;
+}
+
+.high-contrast-mode .bg-card,
+.high-contrast-mode .bg-input {
+  border-width: 2px !important;
+}
+
+/* No focus indicators setting */
+.no-focus-indicators *:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.no-focus-indicators button:focus-visible,
+.no-focus-indicators a:focus-visible,
+.no-focus-indicators input:focus-visible,
+.no-focus-indicators textarea:focus-visible,
+.no-focus-indicators select:focus-visible {
+  outline: none !important;
+}
+
+/* Focus visible for keyboard navigation (default) */
 .focus-visible:focus-visible {
   outline: 2px solid var(--val-primary);
   outline-offset: 2px;

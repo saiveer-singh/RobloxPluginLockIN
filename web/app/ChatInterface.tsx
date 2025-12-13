@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useSettings } from '@/lib/settings';
+import { useSound, useDesktopNotification } from '@/lib/useSound';
 import type { ModelProvider, ModelInfo } from '@/lib/models';
 import { MODEL_CONFIGS, ALL_MODELS } from '@/lib/models';
 import { calculateCoinCost, getCostDescription } from '@/lib/firebase';
@@ -73,6 +74,8 @@ function ChatInterface(): React.ReactNode {
   const { data: session } = useSession();
   const { settings, updateSettings } = useSettings();
   const { addAssetToTree, getProjectContextString, setCurrentMessageCount } = useProject();
+  const { playMessageComplete } = useSound();
+  const { showNotification } = useDesktopNotification();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -573,6 +576,10 @@ function ChatInterface(): React.ReactNode {
       }
 
       setMessages((prev: Message[]) => [...prev, aiMsg]);
+
+      // Play sound and show notification on message complete
+      playMessageComplete();
+      showNotification('NxtAI', 'AI response generated successfully');
     } catch (e: unknown) {
       console.error('Send message error:', e);
       let errorContent = 'An unexpected error occurred';
@@ -593,7 +600,7 @@ function ChatInterface(): React.ReactNode {
       setLoading(false);
       setStreamingReasoning(null);
     }
-  }, [input, loading, currentThreadId, threads, selectedModel, systemPrompt, settings, createNewThread, userId, addAssetToTree, getProjectContextString, updateSettings]);
+  }, [input, loading, currentThreadId, threads, selectedModel, systemPrompt, settings, createNewThread, userId, addAssetToTree, getProjectContextString, updateSettings, playMessageComplete, showNotification]);
 
   const copyToken = async () => {
     if (pluginToken) {
@@ -689,8 +696,9 @@ function ChatInterface(): React.ReactNode {
     }
   }, [userId, fetchCoinBalance]);
 
-  // Login Modal for optional authentication
+  // Login Modal for authentication
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isLoginMode, setIsLoginMode] = useState(true); // true = login, false = register
 
   const handleCustomSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -703,7 +711,7 @@ function ChatInterface(): React.ReactNode {
 
     // Validate inputs
     const usernameError = validateUsername(trimmedUsername);
-    const passwordError = validatePassword(trimmedPassword);
+    const passwordError = isLoginMode ? null : validatePassword(trimmedPassword);
 
     if (usernameError || passwordError) {
       setValidationErrors({
@@ -713,26 +721,80 @@ function ChatInterface(): React.ReactNode {
       return;
     }
 
-    // Register username
-    const existingUsers = localStorage.getItem('registered-users');
-    const users = existingUsers ? JSON.parse(existingUsers) : [];
-    users.push(trimmedUsername.toLowerCase());
-    localStorage.setItem('registered-users', JSON.stringify(users));
+    try {
+      if (isLoginMode) {
+        // Login - verify credentials with API
+        const response = await fetch(`/api/users/register?username=${encodeURIComponent(trimmedUsername)}&password=${encodeURIComponent(trimmedPassword)}`);
+        const data = await response.json();
 
-    // Attempt sign in
-    const result = await signIn('credentials', {
-      username: trimmedUsername,
-      password: trimmedPassword,
-      redirect: false,
-    });
+        if (!response.ok) {
+          if (response.status === 404) {
+            setValidationErrors({ username: 'Account not found. Please register first.' });
+          } else if (response.status === 401) {
+            setValidationErrors({ password: 'Invalid password. Please try again.' });
+          } else {
+            setValidationErrors({ password: data.error || 'Login failed.' });
+          }
+          return;
+        }
 
-    if (result?.ok) {
-      // Force a page reload to update session
-      window.location.reload();
-    } else {
-      setValidationErrors({
-        password: 'Authentication failed. Please try again.',
-      });
+        // If Roblox verified, save that info
+        if (data.verified && data.robloxUserId) {
+          const userData = {
+            userId: data.robloxUserId,
+            displayName: data.robloxDisplayName || data.username
+          };
+          setVerifiedUser(userData);
+          setIsVerified(true);
+          localStorage.setItem('nxtai-verified-user', JSON.stringify(userData));
+        }
+
+        // Sign in with NextAuth
+        const result = await signIn('credentials', {
+          username: trimmedUsername,
+          password: trimmedPassword,
+          redirect: false,
+        });
+
+        if (result?.ok) {
+          window.location.reload();
+        }
+      } else {
+        // Register - create new account
+        const response = await fetch('/api/users/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: trimmedUsername,
+            password: trimmedPassword,
+            robloxUserId: verifiedUser?.userId
+          })
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          if (response.status === 409) {
+            setValidationErrors({ username: 'Username already taken. Try another or login.' });
+          } else {
+            setValidationErrors({ password: data.error || 'Registration failed.' });
+          }
+          return;
+        }
+
+        // Sign in with NextAuth after registration
+        const result = await signIn('credentials', {
+          username: trimmedUsername,
+          password: trimmedPassword,
+          redirect: false,
+        });
+
+        if (result?.ok) {
+          window.location.reload();
+        }
+      }
+    } catch (error) {
+      console.error('Auth error:', error);
+      setValidationErrors({ password: 'An error occurred. Please try again.' });
     }
   };
 
@@ -742,8 +804,8 @@ function ChatInterface(): React.ReactNode {
       <div className="bg-card border border-border rounded-xl p-8 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
         <div className="text-center space-y-6">
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-foreground">Sign In</h2>
-            <p className="text-secondary">Create an account to save your progress</p>
+            <h2 className="text-2xl font-bold text-foreground">{isLoginMode ? 'Sign In' : 'Create Account'}</h2>
+            <p className="text-secondary">{isLoginMode ? 'Login to your account' : 'Register a new account'}</p>
           </div>
           <form onSubmit={handleCustomSignIn} className="space-y-4">
             <div className="space-y-3">
@@ -757,7 +819,7 @@ function ChatInterface(): React.ReactNode {
                       setValidationErrors(prev => ({ ...prev, username: undefined }));
                     }
                   }}
-                  placeholder="Choose a username..."
+                  placeholder="Username"
                   className={`w-full bg-input border rounded-lg px-4 py-3 text-foreground placeholder-secondary focus:outline-none focus:ring-1 ${validationErrors.username
                     ? 'border-error focus:border-error focus:ring-error'
                     : 'border-border focus:border-primary focus:ring-primary'
@@ -780,12 +842,12 @@ function ChatInterface(): React.ReactNode {
                       setValidationErrors(prev => ({ ...prev, password: undefined }));
                     }
                   }}
-                  placeholder="Create a secure password..."
+                  placeholder="Password"
                   className={`w-full bg-input border rounded-lg px-4 py-3 text-foreground placeholder-secondary focus:outline-none focus:ring-1 ${validationErrors.password
                     ? 'border-error focus:border-error focus:ring-error'
                     : 'border-border focus:border-primary focus:ring-primary'
                     }`}
-                  autoComplete="new-password"
+                  autoComplete={isLoginMode ? "current-password" : "new-password"}
                 />
                 {validationErrors.password && (
                   <p className="text-error text-xs mt-1">{validationErrors.password}</p>
@@ -798,24 +860,38 @@ function ChatInterface(): React.ReactNode {
                 className="w-full bg-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-3"
               >
                 <LogIn className="w-5 h-5" />
-                Create Account
+                {isLoginMode ? 'Sign In' : 'Create Account'}
               </button>
             </div>
 
-            <div className="text-xs text-secondary space-y-1">
-              <p><strong>Password requirements:</strong></p>
-              <ul className="list-disc list-inside space-y-0.5 ml-2">
-                <li>At least 8 characters long</li>
-                <li>One uppercase letter (A-Z)</li>
-                <li>One lowercase letter (a-z)</li>
-                <li>One number (0-9)</li>
-                <li>One special character (@$!%*?&)</li>
-              </ul>
-            </div>
+            {!isLoginMode && (
+              <div className="text-xs text-secondary space-y-1">
+                <p><strong>Password requirements:</strong></p>
+                <ul className="list-disc list-inside space-y-0.5 ml-2">
+                  <li>At least 8 characters long</li>
+                  <li>One uppercase letter (A-Z)</li>
+                  <li>One lowercase letter (a-z)</li>
+                  <li>One number (0-9)</li>
+                  <li>One special character (@$!%*?&)</li>
+                </ul>
+              </div>
+            )}
           </form>
+
+          {/* Toggle between login and register */}
+          <button
+            onClick={() => {
+              setIsLoginMode(!isLoginMode);
+              setValidationErrors({});
+            }}
+            className="text-primary hover:underline text-sm"
+          >
+            {isLoginMode ? "Don't have an account? Register" : "Already have an account? Sign In"}
+          </button>
+
           <button
             onClick={() => setShowLoginModal(false)}
-            className="text-secondary hover:text-foreground text-sm transition-colors"
+            className="text-secondary hover:text-foreground text-sm transition-colors block w-full"
           >
             Continue without signing in
           </button>
@@ -1280,19 +1356,42 @@ function ChatInterface(): React.ReactNode {
               <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
                 <div className={`max-w-[85%] sm:max-w-2xl p-3 sm:p-4 animate-slide-up gpu-accelerated message-item bubble-${settings.chatBubbleStyle} ${msg.role === 'user' ? 'bg-primary text-primary-foreground user-message' : msg.role === 'error' ? 'bg-red-900 border border-red-700 text-red-100 animate-wobble' : 'bg-card border border-border text-foreground ai-message'} ${settings.glassEffect && msg.role !== 'user' ? 'glass-card' : ''}`}>
                   <div className="whitespace-pre-wrap text-sm sm:text-base break-words">{msg.content}</div>
+                  {/* Show reasoning if enabled and available */}
+                  {settings.reasoningEnabled && msg.reasoning && (
+                    <div className="mt-2 p-2 bg-input rounded-lg text-xs text-secondary border-l-2 border-primary">
+                      <div className="font-medium text-foreground mb-1">Reasoning:</div>
+                      {msg.reasoning}
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 sm:gap-3 mt-2 flex-wrap">
-                    {msg.timestamp && (
+                    {/* Timestamp - conditional */}
+                    {settings.showTimestamps && msg.timestamp && (
                       <div className="text-xs opacity-60">
                         {new Date(msg.timestamp).toLocaleTimeString()}
                       </div>
                     )}
-                    {msg.role === 'ai' && msg.data && msg.data.coinCost && (
+                    {/* Coin cost - conditional */}
+                    {settings.showCoinCost && msg.role === 'ai' && msg.data && msg.data.coinCost && (
                       <>
-                        <span className="text-xs opacity-60">•</span>
+                        {settings.showTimestamps && msg.timestamp && <span className="text-xs opacity-60">•</span>}
                         <div className="flex items-center gap-1 text-xs opacity-60">
                           <Coins className="w-3 h-3 text-yellow-500" />
                           <span>{msg.data.coinCost} coins</span>
                         </div>
+                      </>
+                    )}
+                    {/* Token count - conditional */}
+                    {settings.showTokenCount && msg.role === 'ai' && msg.tokensUsed && (
+                      <>
+                        <span className="text-xs opacity-60">•</span>
+                        <div className="text-xs opacity-60">{msg.tokensUsed} tokens</div>
+                      </>
+                    )}
+                    {/* Word count - conditional */}
+                    {settings.showWordCount && msg.content && (
+                      <>
+                        <span className="text-xs opacity-60">•</span>
+                        <div className="text-xs opacity-60">{msg.content.split(/\s+/).filter(Boolean).length} words</div>
                       </>
                     )}
                   </div>
@@ -1336,7 +1435,7 @@ function ChatInterface(): React.ReactNode {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                    if (settings.enterToSend && e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       sendMessage();
                     }

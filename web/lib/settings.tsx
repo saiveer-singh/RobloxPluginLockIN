@@ -802,7 +802,55 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     // Apply animations
     root.style.setProperty('--animation-duration', settings.animations ? '0.2s' : '0s');
-  }, [themeColors, settings.fontSize, settings.animations, settings.accentColor]);
+
+    // Apply font family
+    const fontFamilies: Record<string, string> = {
+      system: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      inter: '"Inter", sans-serif',
+      roboto: '"Roboto", sans-serif',
+      jetbrains: '"JetBrains Mono", monospace',
+      fira: '"Fira Sans", sans-serif',
+    };
+    root.style.setProperty('--font-body', fontFamilies[settings.fontFamily] || fontFamilies.system);
+
+    // Apply code font
+    const codeFonts: Record<string, string> = {
+      mono: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+      jetbrains: '"JetBrains Mono", monospace',
+      'fira-code': '"Fira Code", monospace',
+      cascadia: '"Cascadia Code", monospace',
+    };
+    root.style.setProperty('--font-code', codeFonts[settings.codeFont] || codeFonts.mono);
+
+    // Apply line height
+    const lineHeights: Record<string, string> = {
+      tight: '1.25',
+      normal: '1.5',
+      relaxed: '1.75',
+    };
+    root.style.setProperty('--line-height-base', lineHeights[settings.lineHeight] || lineHeights.normal);
+
+    // Apply reduced motion
+    if (settings.reducedMotion) {
+      root.classList.add('reduced-motion');
+    } else {
+      root.classList.remove('reduced-motion');
+    }
+
+    // Apply high contrast mode
+    if (settings.highContrast) {
+      root.classList.add('high-contrast-mode');
+    } else {
+      root.classList.remove('high-contrast-mode');
+    }
+
+    // Apply focus indicators
+    if (settings.focusIndicators) {
+      root.classList.remove('no-focus-indicators');
+    } else {
+      root.classList.add('no-focus-indicators');
+    }
+  }, [themeColors, settings.fontSize, settings.animations, settings.accentColor, settings.fontFamily, settings.codeFont, settings.lineHeight, settings.reducedMotion, settings.highContrast, settings.focusIndicators]);
 
   return (
     <SettingsContext.Provider value={{ settings, updateSettings, themeColors, resetToDefaults }}>

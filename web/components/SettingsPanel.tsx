@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Settings, X, Monitor, Zap, MessageSquare, RotateCcw, Cpu, Search, Check, ChevronDown, Palette, BarChart3, Copy, RefreshCw, Accessibility, Type, Bot, Bell, Shield, Keyboard, Download } from 'lucide-react';
 import { useSettings, ThemePreset, themePresets, ThemeColors } from '@/lib/settings';
+import { useSound } from '@/lib/useSound';
 import { ModelIcon } from './ModelIcon';
 import { ALL_MODELS, getCategories, type ModelInfo } from '@/lib/models';
 
@@ -29,6 +30,42 @@ function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void 
         }}
         className="absolute top-1 w-5 h-5 rounded-full shadow-md transition-all duration-200"
       />
+    </button>
+  );
+}
+
+// Sound Button Component with preview
+type NotificationSound = 'none' | 'subtle' | 'chime' | 'ping';
+
+function SoundButton({
+  sound,
+  currentSound,
+  onSelect
+}: {
+  sound: NotificationSound;
+  currentSound: NotificationSound;
+  onSelect: (sound: NotificationSound) => void;
+}) {
+  const { playNotification } = useSound();
+
+  const handleClick = () => {
+    onSelect(sound);
+    // Play preview if not 'none'
+    if (sound !== 'none') {
+      // Temporarily enable sound for preview
+      setTimeout(() => playNotification(), 50);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className={`px-3 py-1 text-xs rounded-lg border transition-all ${currentSound === sound
+        ? 'bg-primary text-primary-foreground border-primary'
+        : 'bg-input border-border text-foreground hover:border-primary/50'
+        }`}
+    >
+      {sound.charAt(0).toUpperCase() + sound.slice(1)}
     </button>
   );
 }
@@ -701,16 +738,12 @@ export function SettingsPanel({ isOpen, onClose, pluginToken, copyToken, regener
                         </div>
                         <div className="flex gap-2">
                           {(['none', 'subtle', 'chime', 'ping'] as const).map((sound) => (
-                            <button
+                            <SoundButton
                               key={sound}
-                              onClick={() => updateSettings({ notificationSound: sound })}
-                              className={`px-3 py-1 text-xs rounded-lg border transition-all ${settings.notificationSound === sound
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-input border-border text-foreground hover:border-primary/50'
-                                }`}
-                            >
-                              {sound.charAt(0).toUpperCase() + sound.slice(1)}
-                            </button>
+                              sound={sound}
+                              currentSound={settings.notificationSound}
+                              onSelect={(s) => updateSettings({ notificationSound: s })}
+                            />
                           ))}
                         </div>
                       </div>

@@ -29,21 +29,41 @@ export async function getUserCoins(userId: string): Promise<number> {
     const data = await response.json();
     console.log('Response data:', data);
 
+    const FREE_STARTER_COINS = 10;
+
     if (!data) {
-      console.log('No data found, initializing new user with 0 coins');
-      // Initialize new user with 0 coins
+      console.log(`No data found, initializing new user with ${FREE_STARTER_COINS} free coins`);
+      // Initialize new user with FREE starter coins
       const initResponse = await fetch(`${DATABASE_URL}/users/${userId}.json?auth=${DATABASE_SECRET}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
-          coins: 0,
+          coins: FREE_STARTER_COINS,
+          claimedFreeBonus: true,
           lastUpdated: Date.now()
         })
       });
       console.log('Init response status:', initResponse.status);
       console.log('Init response ok:', initResponse.ok);
-      return 0;
+      return FREE_STARTER_COINS;
+    }
+
+    // Check if existing user hasn't claimed their free bonus yet
+    if (!data.claimedFreeBonus && data.coins === 0) {
+      console.log(`Existing user with 0 coins, granting ${FREE_STARTER_COINS} free bonus coins`);
+      const newCoins = FREE_STARTER_COINS;
+      await fetch(`${DATABASE_URL}/users/${userId}.json?auth=${DATABASE_SECRET}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          coins: newCoins,
+          claimedFreeBonus: true,
+          lastUpdated: Date.now()
+        })
+      });
+      return newCoins;
     }
 
     const coins = data.coins || 0;
