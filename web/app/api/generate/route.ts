@@ -13,14 +13,14 @@ export async function POST(req: Request) {
     console.log('Generate request:', { prompt: prompt?.substring(0, 100), model, userId });
 
     if (!prompt) {
-      return new Response(JSON.stringify({ error: "No prompt provided" }), { 
+      return new Response(JSON.stringify({ error: "No prompt provided" }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     if (!userId) {
-      return new Response(JSON.stringify({ error: "No userId provided" }), { 
+      return new Response(JSON.stringify({ error: "No userId provided" }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     // Validate model
     const config = MODEL_CONFIGS[model as keyof typeof MODEL_CONFIGS];
     if (!config) {
-      return new Response(JSON.stringify({ error: `Unsupported model: ${model}` }), { 
+      return new Response(JSON.stringify({ error: `Unsupported model: ${model}` }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -77,34 +77,38 @@ export async function POST(req: Request) {
         }
       }
     } else if (config.provider === 'zhipuai') {
-      apiKey = process.env.ZHIPUAI_API_KEY;
+      apiKey = process.env.ZHIPUAI_API_KEY || process.env.ZAI_API_KEY;
       if (!apiKey) {
         try {
           const fs = await import('fs');
           const path = await import('path');
-          const keysPath = path.join(process.cwd(), 'web', 'api-keys.json');
+          // Try both cwd and cwd/web paths for the api-keys.json
+          let keysPath = path.join(process.cwd(), 'api-keys.json');
+          if (!fs.existsSync(keysPath)) {
+            keysPath = path.join(process.cwd(), 'web', 'api-keys.json');
+          }
           if (fs.existsSync(keysPath)) {
             const fileKeys = JSON.parse(fs.readFileSync(keysPath, 'utf8'));
-            apiKey = fileKeys.ZHIPUAI_API_KEY;
+            apiKey = fileKeys.ZHIPUAI_API_KEY || fileKeys.ZAI_API_KEY;
           }
         } catch (e) {
-          console.error('Error reading Zhipu AI API key from file:', e);
+          console.error('Error reading Z.AI API key from file:', e);
         }
       }
     }
 
     if (!apiKey) {
-       console.error(`API key not found for provider: ${config.provider}`);
-       console.error('Available env vars:', Object.keys(process.env).filter(k => k.includes('API')));
-       return new Response(JSON.stringify({
-         error: `API key not found for provider: ${config.provider}. Please check your api-keys.json file.`
-       }), {
-         status: 500,
-         headers: { 'Content-Type': 'application/json' }
-       });
-     }
+      console.error(`API key not found for provider: ${config.provider}`);
+      console.error('Available env vars:', Object.keys(process.env).filter(k => k.includes('API')));
+      return new Response(JSON.stringify({
+        error: `API key not found for provider: ${config.provider}. Please check your api-keys.json file.`
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
-     console.log(`Using API key for ${config.provider}:`, apiKey.substring(0, 10) + '...');
+    console.log(`Using API key for ${config.provider}:`, apiKey.substring(0, 10) + '...');
 
     // Create provider based on config
     let openai;
@@ -116,7 +120,7 @@ export async function POST(req: Request) {
     } else if (config.provider === 'zhipuai') {
       openai = createOpenAI({
         apiKey,
-        baseURL: 'https://open.bigmodel.cn/api/paas/v4',
+        baseURL: 'https://api.z.ai/api/paas/v4',
       });
     } else {
       openai = createOpenAI({
@@ -150,10 +154,10 @@ export async function POST(req: Request) {
         // Calculate coin cost and deduct
         const coinCost = calculateCoinCost(result.tokensUsed);
         const deducted = await deductCoins(userId, coinCost);
-        
+
         if (!deducted) {
-          return new Response(JSON.stringify({ 
-            error: `Insufficient coins. Required: ${coinCost}, Available: ${userCoins}` 
+          return new Response(JSON.stringify({
+            error: `Insufficient coins. Required: ${coinCost}, Available: ${userCoins}`
           }), {
             status: 402, // Payment Required
             headers: { 'Content-Type': 'application/json' }
@@ -180,7 +184,7 @@ export async function POST(req: Request) {
           coinCost,
           remainingCoins
         };
-        
+
         return new Response(JSON.stringify(responseData), {
           headers: {
             'Content-Type': 'application/json',
@@ -208,19 +212,19 @@ export async function POST(req: Request) {
       // Use streaming for other providers
       console.log('Streaming with model:', config.modelId);
 
-       try {
-         console.log('Starting stream with model:', config.modelId, 'provider:', config.provider);
-         const result = await streamText({
-           model: openai(config.modelId),
-           system: fullSystemPrompt,
-           messages: [
-             {
-               role: 'user',
-               content: `${prompt}\n\nIMPORTANT: Respond with ONLY valid JSON. No markdown, no explanations outside the JSON. Start with { and end with }.`
-             }
-           ],
-           temperature: 0.7,
-            onFinish: async ({ text, usage }) => {
+      try {
+        console.log('Starting stream with model:', config.modelId, 'provider:', config.provider);
+        const result = await streamText({
+          model: openai(config.modelId),
+          system: fullSystemPrompt,
+          messages: [
+            {
+              role: 'user',
+              content: `${prompt}\n\nIMPORTANT: Respond with ONLY valid JSON. No markdown, no explanations outside the JSON. Start with { and end with }.`
+            }
+          ],
+          temperature: 0.7,
+          onFinish: async ({ text, usage }) => {
             // Parse and queue the result for the plugin
             console.log('Stream finished. Raw AI response length:', text.length);
             console.log('Raw AI response (first 500 chars):', text.substring(0, 500));
@@ -263,7 +267,7 @@ export async function POST(req: Request) {
               // Calculate coin cost and deduct
               const coinCost = calculateCoinCost(jsonContent.tokensUsed);
               const deducted = await deductCoins(userId, coinCost);
-              
+
               if (deducted) {
                 const remainingCoins = await getUserCoins(userId);
                 jsonContent.coinCost = coinCost;
@@ -278,29 +282,29 @@ export async function POST(req: Request) {
               addToQueue(jsonContent, userId);
               console.log('Added to queue for user:', userId);
             } catch (e) {
-             console.error('Error processing final content:', e);
-             console.error('Failed text (first 1000 chars):', text.substring(0, 1000));
+              console.error('Error processing final content:', e);
+              console.error('Failed text (first 1000 chars):', text.substring(0, 1000));
 
-             // Create a fallback response
-             const fallbackResponse = {
-               reasoning: 'Failed to parse AI response',
-               message: 'Error: The AI did not return valid JSON. Please try again.',
-               assets: [],
-               error: e instanceof Error ? e.message : 'Unknown error',
-               rawResponse: text.substring(0, 500)
-             };
-             addToQueue(fallbackResponse, userId);
-           }
-         },
-       });
+              // Create a fallback response
+              const fallbackResponse = {
+                reasoning: 'Failed to parse AI response',
+                message: 'Error: The AI did not return valid JSON. Please try again.',
+                assets: [],
+                error: e instanceof Error ? e.message : 'Unknown error',
+                rawResponse: text.substring(0, 500)
+              };
+              addToQueue(fallbackResponse, userId);
+            }
+          },
+        });
 
-      // Return the stream with metadata
-      return result.toTextStreamResponse({
-        headers: {
-          'X-Request-Type': requestType,
-          'X-Model-Id': config.modelId,
-        },
-      });
+        // Return the stream with metadata
+        return result.toTextStreamResponse({
+          headers: {
+            'X-Request-Type': requestType,
+            'X-Model-Id': config.modelId,
+          },
+        });
       } catch (streamError) {
         console.error('Stream error:', streamError);
         return new Response(JSON.stringify({
@@ -318,12 +322,12 @@ export async function POST(req: Request) {
     if (e instanceof Error) {
       console.error('Error stack:', e.stack);
     }
-    
+
     const errorMessage = e instanceof Error ? e.message : "Internal Server Error";
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' && e instanceof Error ? e.stack : undefined
-    }), { 
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

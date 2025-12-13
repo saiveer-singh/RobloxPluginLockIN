@@ -2,8 +2,10 @@
 import { COIN_RATIOS } from './models';
 import type { ModelProvider } from './models';
 
-const DATABASE_URL = 'https://tissueai-coins-default-rtdb.firebaseio.com';
-const DATABASE_SECRET = 'JndkJy6Vg3hMYskq6eUreOM8RquD4jBHJw0mrXAg';
+// Use environment variables for secrets - NEVER hardcode!
+const DATABASE_URL = process.env.FIREBASE_DATABASE_URL || 'https://tissueai-coins-default-rtdb.firebaseio.com';
+const DATABASE_SECRET = process.env.FIREBASE_DATABASE_SECRET || '';
+
 
 export interface UserCoins {
   userId: string;
@@ -19,11 +21,11 @@ export async function getUserCoins(userId: string): Promise<number> {
     console.log('=== FIREBASE GET REQUEST ===');
     console.log('UserId:', userId);
     console.log('URL:', `${DATABASE_URL}/users/${userId}.json?auth=${DATABASE_SECRET}`);
-    
+
     const response = await fetch(`${DATABASE_URL}/users/${userId}.json?auth=${DATABASE_SECRET}`);
     console.log('Response status:', response.status);
     console.log('Response ok:', response.ok);
-    
+
     const data = await response.json();
     console.log('Response data:', data);
 
@@ -64,7 +66,7 @@ export async function updateUserCoins(userId: string, coins: number): Promise<vo
     console.log('UserId:', userId);
     console.log('Coins:', coins);
     console.log('URL:', `${DATABASE_URL}/users/${userId}.json?auth=${DATABASE_SECRET}`);
-    
+
     const response = await fetch(`${DATABASE_URL}/users/${userId}.json?auth=${DATABASE_SECRET}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -93,7 +95,7 @@ export async function updateUserCoins(userId: string, coins: number): Promise<vo
       }
       throw new Error(`Firebase update failed: ${response.status} ${response.statusText} - ${responseText}`);
     }
-    
+
     console.log('=== FIREBASE UPDATE SUCCESS ===');
   } catch (error) {
     console.error('=== FIREBASE UPDATE ERROR ===');
@@ -111,12 +113,12 @@ export async function addCoins(userId: string, amount: number): Promise<number> 
     console.log('=== ADDING COINS ===');
     console.log('UserId:', userId);
     console.log('Amount:', amount);
-    
+
     const currentCoins = await getUserCoins(userId);
     const newBalance = currentCoins + amount;
     console.log('Current coins:', currentCoins);
     console.log('New balance:', newBalance);
-    
+
     await updateUserCoins(userId, newBalance);
     return newBalance;
   } catch (error) {
@@ -135,15 +137,15 @@ export async function deductCoins(userId: string, amount: number): Promise<boole
     console.log('=== DEDUCTING COINS ===');
     console.log('UserId:', userId);
     console.log('Amount:', amount);
-    
+
     const currentCoins = await getUserCoins(userId);
     console.log('Current coins:', currentCoins);
-    
+
     if (currentCoins < amount) {
       console.log('Insufficient coins!');
       return false; // Insufficient coins
     }
-    
+
     const newBalance = currentCoins - amount;
     console.log('New balance after deduction:', newBalance);
     await updateUserCoins(userId, newBalance);

@@ -7,28 +7,32 @@ function getApiKeys(): Record<string, string | undefined> {
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     OPENCODE_API_KEY: process.env.OPENCODE_API_KEY,
+    ZHIPUAI_API_KEY: process.env.ZHIPUAI_API_KEY,
+    ZAI_API_KEY: process.env.ZAI_API_KEY,
   };
 
   try {
     // Always try reading file in Node environment to supplement env vars
     if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-        const keysPath = path.join(process.cwd(), 'api-keys.json');
-        if (fs.existsSync(keysPath)) {
-          const file = fs.readFileSync(keysPath, 'utf8');
-          try {
-            const fileKeys = JSON.parse(file);
-            // Merge keys, letting environment variables take precedence if they exist and are not empty
-            keys = {
-              OPENAI_API_KEY: keys.OPENAI_API_KEY || fileKeys.OPENAI_API_KEY,
-              OPENROUTER_API_KEY: keys.OPENROUTER_API_KEY || fileKeys.OPENROUTER_API_KEY,
-              GEMINI_API_KEY: keys.GEMINI_API_KEY || fileKeys.GEMINI_API_KEY,
-              OPENCODE_API_KEY: keys.OPENCODE_API_KEY || fileKeys.OPENCODE_API_KEY,
-              ...fileKeys // Include any other keys from file
-            };
-          } catch (e) {
-            console.error('Failed to parse api-keys.json:', e);
-          }
+      const keysPath = path.join(process.cwd(), 'api-keys.json');
+      if (fs.existsSync(keysPath)) {
+        const file = fs.readFileSync(keysPath, 'utf8');
+        try {
+          const fileKeys = JSON.parse(file);
+          // Merge keys, letting environment variables take precedence if they exist and are not empty
+          keys = {
+            OPENAI_API_KEY: keys.OPENAI_API_KEY || fileKeys.OPENAI_API_KEY,
+            OPENROUTER_API_KEY: keys.OPENROUTER_API_KEY || fileKeys.OPENROUTER_API_KEY,
+            GEMINI_API_KEY: keys.GEMINI_API_KEY || fileKeys.GEMINI_API_KEY,
+            OPENCODE_API_KEY: keys.OPENCODE_API_KEY || fileKeys.OPENCODE_API_KEY,
+            ZHIPUAI_API_KEY: keys.ZHIPUAI_API_KEY || fileKeys.ZHIPUAI_API_KEY,
+            ZAI_API_KEY: keys.ZAI_API_KEY || fileKeys.ZAI_API_KEY,
+            ...fileKeys // Include any other keys from file
+          };
+        } catch (e) {
+          console.error('Failed to parse api-keys.json:', e);
         }
+      }
     }
   } catch (e) {
     console.warn('Error loading api-keys.json:', e);
@@ -393,7 +397,7 @@ CRITICAL: Always create complete, well-structured models with proper hierarchy a
 // Get the appropriate system prompt based on request type
 export function getSystemPrompt(requestType: 'scripting' | 'vfx' | 'animation' | 'modeling', customPrompt?: string): string {
   let fullSystemPrompt = '';
-  
+
   switch (requestType) {
     case 'scripting':
       fullSystemPrompt = SCRIPTING_PROMPT;
@@ -419,7 +423,7 @@ export function getSystemPrompt(requestType: 'scripting' | 'vfx' | 'animation' |
 // Enhanced request type detection with context awareness and scoring
 export function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animation' | 'modeling' {
   const lowerPrompt = prompt.toLowerCase();
-  
+
   // Enhanced keyword sets with weights and context
   const keywordSets = {
     vfx: {
@@ -538,7 +542,7 @@ export function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animat
       context: ['physical', 'structure', 'geometry', 'appearance', 'static']
     }
   };
-  
+
   // Calculate weighted scores for each type
   const scores: Record<string, number> = {
     vfx: 0,
@@ -546,7 +550,7 @@ export function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animat
     scripting: 0,
     modeling: 0
   };
-  
+
   // Score based on keyword matches
   for (const [type, data] of Object.entries(keywordSets)) {
     for (const { word, weight } of data.keywords) {
@@ -555,7 +559,7 @@ export function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animat
       }
     }
   }
-  
+
   // Bonus points for context matches
   for (const [type, data] of Object.entries(keywordSets)) {
     for (const contextWord of data.context) {
@@ -564,42 +568,42 @@ export function detectRequestType(prompt: string): 'scripting' | 'vfx' | 'animat
       }
     }
   }
-  
+
   // Find the best match
   const maxScore = Math.max(...Object.values(scores));
-  
+
   // If all scores are 0, use intelligent default based on prompt analysis
   if (maxScore === 0) {
     // Check for action verbs vs creation verbs
     const actionVerbs = ['make', 'create', 'build', 'generate'];
     const hasActionVerb = actionVerbs.some(verb => lowerPrompt.includes(verb));
-    
+
     if (hasActionVerb) {
       // Default to modeling for general creation requests
       return 'modeling';
     }
-    
+
     // Check for technical vs descriptive language
     const technicalWords = ['system', 'function', 'code', 'script', 'logic'];
     const descriptiveWords = ['look', 'appear', 'visual', 'effect', 'style'];
-    
+
     const technicalCount = technicalWords.filter(word => lowerPrompt.includes(word)).length;
     const descriptiveCount = descriptiveWords.filter(word => lowerPrompt.includes(word)).length;
-    
+
     if (technicalCount > descriptiveCount) {
       return 'scripting';
     } else if (descriptiveCount > 0) {
       return 'vfx';
     }
-    
+
     return 'modeling';
   }
-  
+
   // Return the type with the highest score
-  const bestType = Object.entries(scores).reduce((best, [type, score]) => 
+  const bestType = Object.entries(scores).reduce((best, [type, score]) =>
     score > scores[best] ? type : best
-  , 'modeling');
-  
+    , 'modeling');
+
   return bestType as 'scripting' | 'vfx' | 'animation' | 'modeling';
 }
 
@@ -628,12 +632,12 @@ export function cleanJson(text: string): string {
 
   // Remove markdown code blocks
   cleaned = cleaned.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-  
+
   // Remove common prefixes
   cleaned = cleaned.replace(/^Here's the JSON:/i, '');
   cleaned = cleaned.replace(/^JSON:/i, '');
   cleaned = cleaned.replace(/^Response:/i, '');
-  
+
   cleaned = cleaned.trim();
 
   // Find the first '{' and last '}'
@@ -715,14 +719,19 @@ export async function generateContent(prompt: string, model: string, systemPromp
     apiKey = currentApiKeys.OPENCODE_API_KEY;
     endpoint = 'https://opencode.ai/zen/v1/chat/completions';
   } else if (config.provider === 'zhipuai') {
-    // Zhipu AI model - use direct fetch for now
-    const zhipuApiKey = currentApiKeys.ZHIPUAI_API_KEY || '995db4e88908451389d7d1b28cb1d24b.V6cm1j0LfojRgjDk';
-    
-    const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+    // Z.AI / Zhipu AI model - use direct fetch
+    const zhipuApiKey = currentApiKeys.ZHIPUAI_API_KEY || currentApiKeys.ZAI_API_KEY;
+
+    if (!zhipuApiKey) {
+      throw new Error('Z.AI API key not found. Please add ZHIPUAI_API_KEY or ZAI_API_KEY to api-keys.json');
+    }
+
+    const response = await fetch('https://api.z.ai/api/paas/v4/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${zhipuApiKey}`,
         'Content-Type': 'application/json',
+        'Accept-Language': 'en-US,en',
       },
       body: JSON.stringify({
         model: config.modelId,
@@ -736,12 +745,14 @@ export async function generateContent(prompt: string, model: string, systemPromp
     });
 
     if (!response.ok) {
-      throw new Error(`Zhipu AI API Error: ${response.statusText}`);
+      const errorData = await response.text();
+      console.error('Z.AI API Error:', response.status, errorData);
+      throw new Error(`Z.AI API Error: ${response.status} - ${errorData}`);
     }
 
     const data = await response.json();
     const rawContent = data.choices?.[0]?.message?.content || '';
-    
+
     let content;
     try {
       const cleanedContent = cleanJson(rawContent);
@@ -943,7 +954,7 @@ export async function generateContentStream(
 
   console.log('Fetching from:', endpoint);
   console.log('Using model:', config.modelId);
-  
+
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -976,8 +987,8 @@ export async function generateContentStream(
     throw new Error('No response body from API');
   }
 
-  return { 
-    stream: response.body, 
+  return {
+    stream: response.body,
     requestType,
     provider: config.provider,
     modelId: config.modelId

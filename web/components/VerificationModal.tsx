@@ -20,7 +20,9 @@ interface VerificationData {
 }
 
 export function VerificationModal({ isOpen, onClose, onVerificationComplete, initialUserId = "" }: VerificationModalProps) {
-  const [userId, setUserId] = useState(initialUserId);
+  // Ensure initialUserId is always a string
+  const [userId, setUserId] = useState(typeof initialUserId === 'string' ? initialUserId : String(initialUserId || ''));
+
   const [verificationCode, setVerificationCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,10 +37,10 @@ export function VerificationModal({ isOpen, onClose, onVerificationComplete, ini
     try {
       const response = await fetch(`/api/verify?userId=${userId}`);
       const data: VerificationData = await response.json();
-      
+
       if (response.ok) {
         setVerificationStatus(data);
-        
+
         if (data.verified && data.displayName) {
           // Auto-close if verified
           setTimeout(() => {
@@ -49,7 +51,7 @@ export function VerificationModal({ isOpen, onClose, onVerificationComplete, ini
             onClose();
           }, 1000);
         }
-        
+
         // Calculate time until next code refresh
         if (data.expires) {
           const now = Date.now() / 1000;
@@ -68,7 +70,7 @@ export function VerificationModal({ isOpen, onClose, onVerificationComplete, ini
   // Handle verification submission
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!userId.trim() || !verificationCode.trim()) {
       setError('Please enter both User ID and verification code');
       return;
@@ -111,13 +113,13 @@ export function VerificationModal({ isOpen, onClose, onVerificationComplete, ini
   useEffect(() => {
     if (isOpen && userId && !verificationStatus?.verified) {
       setPollingActive(true);
-      
+
       // Initial check
       checkVerificationStatus();
-      
+
       // Poll every 2 seconds
       const interval = setInterval(checkVerificationStatus, 2000);
-      
+
       return () => {
         clearInterval(interval);
         setPollingActive(false);
@@ -131,7 +133,7 @@ export function VerificationModal({ isOpen, onClose, onVerificationComplete, ini
       const timer = setTimeout(() => {
         setTimeUntilRefresh(prev => Math.max(0, prev - 1));
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [timeUntilRefresh]);
@@ -145,13 +147,14 @@ export function VerificationModal({ isOpen, onClose, onVerificationComplete, ini
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-border rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-card border-0 sm:border border-border rounded-none sm:rounded-xl shadow-2xl w-full sm:max-w-md h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto animate-scale-in">
+
         {/* Header */}
-        <div className="p-6 border-b border-border">
+        <div className="p-4 sm:p-6 border-b border-border safe-area-top">
           <div className="flex items-center gap-3 mb-2">
-            <Shield className="w-6 h-6 text-primary" />
-            <h2 className="text-xl font-bold text-foreground">Account Verification</h2>
+            <Shield className="w-6 h-6 text-primary animate-pulse" />
+            <h2 className="text-lg sm:text-xl font-bold text-foreground">Account Verification</h2>
           </div>
           <p className="text-sm text-secondary">
             Enter the verification code from your Roblox game to securely link your account
@@ -215,6 +218,29 @@ export function VerificationModal({ isOpen, onClose, onVerificationComplete, ini
               className="w-full bg-input border border-border rounded-lg px-4 py-3 text-foreground placeholder-secondary focus:outline-none focus:border-primary transition-colors"
               disabled={verificationStatus?.verified}
             />
+            <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <p className="text-xs text-blue-400 font-medium mb-1">How to find your User ID:</p>
+              <ol className="text-xs text-blue-300/80 space-y-1 list-decimal list-inside">
+                <li>Go to your Roblox profile page</li>
+                <li>Look at the URL: roblox.com/users/<span className="text-blue-400 font-mono">123456789</span>/profile</li>
+                <li>The number is your User ID</li>
+              </ol>
+            </div>
+          </div>
+
+          {/* Game Link */}
+          <div className="p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg">
+            <p className="text-sm font-medium text-foreground mb-2">Step 1: Join the verification game</p>
+            <a
+              href="https://www.roblox.com/games/126061369263728/buy-coins-for-the-tissue-plugin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              <Shield className="w-4 h-4" />
+              Open Verification Game
+            </a>
+            <p className="text-xs text-secondary mt-2">Click "Get Code" in the game to receive your verification code</p>
           </div>
 
           <div>
@@ -234,7 +260,7 @@ export function VerificationModal({ isOpen, onClose, onVerificationComplete, ini
               <Key className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" />
             </div>
             <p className="text-xs text-secondary mt-1">
-              Code from Roblox chat (expires in 15 seconds)
+              Code from Roblox game (expires in 15 seconds)
             </p>
           </div>
 

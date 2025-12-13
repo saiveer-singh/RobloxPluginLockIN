@@ -68,7 +68,7 @@ const buildContextString = (nodes: ProjectAsset[], depth: number = 0): string =>
 
       // Include Script Source for context awareness (essential for editing)
       if ((node.className.includes('Script') || node.className === 'ModuleScript') && node.properties.Source) {
-         result += `\n${indent}  Source:\n\`\`\`lua\n${node.properties.Source}\n\`\`\``;
+        result += `\n${indent}  Source:\n\`\`\`lua\n${node.properties.Source}\n\`\`\``;
       }
     }
     result += "\n";
@@ -92,10 +92,12 @@ const DEFAULT_SERVICES: ProjectAsset[] = [
   { id: 'serverstorage', name: 'ServerStorage', className: 'ServerStorage', children: [] },
   { id: 'startergui', name: 'StarterGui', className: 'StarterGui', children: [] },
   { id: 'starterpack', name: 'StarterPack', className: 'StarterPack', children: [] },
-  { id: 'starterplayer', name: 'StarterPlayer', className: 'StarterPlayer', children: [
-    { id: 'starterplayerscripts', name: 'StarterPlayerScripts', className: 'Folder', children: [] },
-    { id: 'startercharacterscripts', name: 'StarterCharacterScripts', className: 'Folder', children: [] },
-  ] },
+  {
+    id: 'starterplayer', name: 'StarterPlayer', className: 'StarterPlayer', children: [
+      { id: 'starterplayerscripts', name: 'StarterPlayerScripts', className: 'Folder', children: [] },
+      { id: 'startercharacterscripts', name: 'StarterCharacterScripts', className: 'Folder', children: [] },
+    ]
+  },
   { id: 'teams', name: 'Teams', className: 'Teams', children: [] },
   { id: 'soundservice', name: 'SoundService', className: 'SoundService', children: [] },
   { id: 'textchatservice', name: 'TextChatService', className: 'TextChatService', children: [] },
@@ -131,7 +133,7 @@ function getTargetServiceId(asset: ProjectAsset): string {
   if (['Part', 'Model', 'MeshPart', 'UnionOperation', 'Accessory'].includes(cls)) return 'workspace';
   if (['Sky', 'Atmosphere', 'BloomEffect', 'BlurEffect', 'ColorCorrectionEffect', 'SunRaysEffect'].includes(cls)) return 'lighting';
   if (cls === 'Sound') return 'soundservice'; // Or workspace, but let's put in service for organization
-  
+
   return 'workspace'; // Default
 }
 
@@ -145,7 +147,7 @@ function mergeAssets(existing: ProjectAsset[], incoming: ProjectAsset[]) {
     if (existingItemIndex !== -1) {
       // Update existing item
       const existingItem = existing[existingItemIndex];
-      
+
       // Merge properties (overwrite with new)
       existingItem.properties = {
         ...existingItem.properties,
@@ -173,7 +175,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem('robloxgen-project-versions');
+        const saved = localStorage.getItem('nxtai-project-versions');
         if (saved) {
           setVersions(JSON.parse(saved));
         }
@@ -186,7 +188,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   // Save versions to localStorage whenever they change
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('robloxgen-project-versions', JSON.stringify(versions));
+      localStorage.setItem('nxtai-project-versions', JSON.stringify(versions));
     }
   }, [versions]);
 
@@ -217,21 +219,21 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const addAssetToTree = useCallback((assetData: AssetData) => {
     if (assetData && Array.isArray(assetData.assets)) {
       const newAssets = assetData.assets.map(convertAIAssetToNode);
-      
+
       setProjectTree((prevTree) => {
         // Deep clone the tree to avoid mutation
         const newTree = JSON.parse(JSON.stringify(prevTree));
 
         newAssets.forEach((asset: ProjectAsset) => {
           const targetId = getTargetServiceId(asset);
-          
+
           // Find the service node
           let targetNode = newTree.find((node: ProjectAsset) => node.id === targetId);
-          
+
           // Special case for nested folders (e.g. StarterPlayerScripts)
           if (!targetNode && targetId === 'starterplayerscripts') {
-             const starterPlayer = newTree.find((node: ProjectAsset) => node.id === 'starterplayer');
-             targetNode = starterPlayer?.children.find((child: ProjectAsset) => child.id === 'starterplayerscripts');
+            const starterPlayer = newTree.find((node: ProjectAsset) => node.id === 'starterplayer');
+            targetNode = starterPlayer?.children.find((child: ProjectAsset) => child.id === 'starterplayerscripts');
           }
 
           if (targetNode) {

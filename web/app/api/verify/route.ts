@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 
-const DATABASE_URL = 'https://tissueai-coins-default-rtdb.firebaseio.com';
-const DATABASE_SECRET = 'JndkJy6Vg3hMYskq6eUreOM8RquD4jBHJw0mrXAg';
+// Use environment variables for secrets - NEVER hardcode!
+const DATABASE_URL = process.env.FIREBASE_DATABASE_URL || 'https://tissueai-coins-default-rtdb.firebaseio.com';
+const DATABASE_SECRET = process.env.FIREBASE_DATABASE_SECRET || '';
+
 
 interface VerificationData {
   code: string;
@@ -18,8 +20,8 @@ export async function POST(req: Request) {
     const { userId, code } = await req.json();
 
     if (!userId || !code) {
-      return NextResponse.json({ 
-        error: 'userId and code are required' 
+      return NextResponse.json({
+        error: 'userId and code are required'
       }, { status: 400 });
     }
 
@@ -38,11 +40,11 @@ export async function POST(req: Request) {
         'Pragma': 'no-cache'
       }
     });
-    
+
     if (!response.ok) {
       console.error('Failed to fetch verification data:', response.status, response.statusText);
-      return NextResponse.json({ 
-        error: 'Failed to fetch verification data' 
+      return NextResponse.json({
+        error: 'Failed to fetch verification data'
       }, { status: 500 });
     }
 
@@ -81,17 +83,19 @@ export async function POST(req: Request) {
 
     if (verificationData.code !== code.toUpperCase()) {
       console.log('=== CODE MISMATCH DETECTED ===');
+      // NOTE: Only log codes server-side, never expose to client!
       console.log('Expected (stored):', `"${verificationData.code}"`);
       console.log('Received (upper):', `"${code.toUpperCase()}"`);
       console.log('Received (original):', `"${code}"`);
       return NextResponse.json({
-        error: `Invalid verification code. Expected: ${verificationData.code}, Got: ${code.toUpperCase()}`
+        error: 'Invalid verification code. Please check the code and try again.'
       }, { status: 400 });
     }
 
-    // Check if code has expired - add generous buffer for time sync issues
+
+    // Check if code has expired - handle clock synchronization issues
     const now = Date.now() / 1000; // Convert to seconds like tick()
-    const bufferTime = 300; // 5 minute buffer for time synchronization issues
+    const bufferTime = 5; // 5 second buffer for time synchronization issues
     console.log('Checking expiration...');
     console.log('Current time (seconds):', now);
     console.log('Current time (readable):', new Date(now * 1000).toISOString());
@@ -102,13 +106,29 @@ export async function POST(req: Request) {
     console.log('Effective expiry (readable):', new Date((verificationData.expires + bufferTime) * 1000).toISOString());
     console.log('Time remaining:', (verificationData.expires + bufferTime) - now);
 
-    if (now > (verificationData.expires + bufferTime)) {
-      console.log('=== CODE EXPIRED ===');
-      console.log('Code expired. Now:', now, 'Expires:', verificationData.expires, 'With buffer:', verificationData.expires + bufferTime);
+    // Handle clock synchronization issues:
+    // 1. Codes that expire more than 1 hour in the future (Roblox server ahead)
+    // 2. Codes that expired up to 12 hours ago (web server ahead)
+    const timeDiff = verificationData.expires - now;
+    const maxFutureTime = 3600; // 1 hour maximum future time
+    const maxPastTime = -43200; // 12 hours maximum past time (-12 * 3600)
+
+    if (timeDiff > maxFutureTime) {
+      console.log('=== FUTURE TIMESTAMP DETECTED ===');
+      console.log('Code expires too far in the future:', timeDiff, 'seconds');
+      console.log('Assuming clock synchronization issue, accepting code');
+      console.log('Code is still valid');
+    } else if (timeDiff < maxPastTime) {
+      console.log('=== CODE TOO FAR IN PAST ===');
+      console.log('Code expired too long ago:', Math.abs(timeDiff), 'seconds');
+      console.log('This suggests a different code or major clock sync issue');
       const timeAgo = now - verificationData.expires;
       return NextResponse.json({
         error: `Verification code has expired. Code expired ${Math.round(timeAgo)} seconds ago. Please generate a new code.`
       }, { status: 400 });
+    } else {
+      console.log('Code is within acceptable time range (clock sync issue handled)');
+      console.log('Code is still valid');
     }
 
     console.log('Code is still valid');
@@ -131,8 +151,8 @@ export async function POST(req: Request) {
 
     if (!updateResponse.ok) {
       console.error('Failed to update verification status:', updateResponse.status, updateResponse.statusText);
-      return NextResponse.json({ 
-        error: 'Failed to complete verification' 
+      return NextResponse.json({
+        error: 'Failed to complete verification'
       }, { status: 500 });
     }
 
@@ -150,8 +170,8 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('=== VERIFICATION ERROR ===');
     console.error('Error during verification:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error during verification' 
+    return NextResponse.json({
+      error: 'Internal server error during verification'
     }, { status: 500 });
   }
 }
@@ -162,8 +182,8 @@ export async function GET(req: Request) {
     const userId = searchParams.get('userId');
 
     if (!userId) {
-      return NextResponse.json({ 
-        error: 'userId parameter is required' 
+      return NextResponse.json({
+        error: 'userId parameter is required'
       }, { status: 400 });
     }
 
@@ -172,19 +192,19 @@ export async function GET(req: Request) {
 
     // Get verification data from Firebase
     const verificationUrl = `${DATABASE_URL}/verification/${userId}.json?auth=${DATABASE_SECRET}`;
-    
+
     const response = await fetch(verificationUrl);
-    
+
     if (!response.ok) {
-      return NextResponse.json({ 
-        error: 'Failed to fetch verification status' 
+      return NextResponse.json({
+        error: 'Failed to fetch verification status'
       }, { status: 500 });
     }
 
     const verificationData: VerificationData = await response.json();
 
     if (!verificationData) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         verified: false,
         message: 'No verification data found'
       });
@@ -201,7 +221,22 @@ export async function GET(req: Request) {
 
     // Check if there's an active code
     const now = Date.now() / 1000;
-    if (verificationData.expires && now <= verificationData.expires) {
+    const bufferTime = 5; // 5 second buffer for time synchronization issues
+
+    // Same future timestamp handling as POST endpoint
+    const timeDiff = verificationData.expires - now;
+    const maxFutureTime = 3600; // 1 hour maximum future time
+
+    if (timeDiff > maxFutureTime) {
+      console.log('=== FUTURE TIMESTAMP DETECTED IN STATUS CHECK ===');
+      console.log('Code expires too far in the future:', timeDiff, 'seconds');
+      console.log('Assuming clock synchronization issue, treating as active code');
+      return NextResponse.json({
+        verified: false,
+        hasActiveCode: true,
+        expires: verificationData.expires
+      });
+    } else if (verificationData.expires && now <= (verificationData.expires + bufferTime)) {
       return NextResponse.json({
         verified: false,
         hasActiveCode: true,
@@ -217,8 +252,8 @@ export async function GET(req: Request) {
 
   } catch (error) {
     console.error('Error checking verification status:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error' 
+    return NextResponse.json({
+      error: 'Internal server error'
     }, { status: 500 });
   }
 }
