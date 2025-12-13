@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Sparkles, Zap, Shield, Code2, Layers, ChevronRight } from 'lucide-react';
+import { ArrowRight, Wand2, Rocket, Lock, Boxes, ChevronRight } from 'lucide-react';
 
 export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
@@ -24,7 +24,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
+              <Wand2 className="w-4 h-4 text-white" />
             </div>
             <span className="text-lg font-semibold tracking-tight">NxtAI</span>
           </Link>
@@ -48,23 +48,21 @@ export default function LandingPage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 h-8 px-4 rounded-full bg-white/5 border border-white/10 text-sm text-white/70 mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Zero copy-paste workflow
+            Works with Roblox Studio
           </div>
 
           {/* Headline */}
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-6">
-            The AI agent for
+            Build Roblox games
             <br />
             <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
-              Roblox development
+              with AI
             </span>
           </h1>
 
           {/* Subtitle */}
           <p className="text-lg sm:text-xl text-white/50 max-w-lg mx-auto mb-10 leading-relaxed">
-            Describe what you want to build.
-            <br />
-            Get production-ready code directly in Studio.
+            Describe what you want. Get working code and assets delivered straight to Studio.
           </p>
 
           {/* CTA Buttons */}
@@ -80,7 +78,7 @@ export default function LandingPage() {
               href="#features"
               className="h-12 px-6 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-all flex items-center gap-2"
             >
-              Learn more
+              See how it works
               <ChevronRight className="w-4 h-4" />
             </a>
           </div>
@@ -108,19 +106,19 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
-                icon: Zap,
-                title: "Instant generation",
-                description: "Get working Lua code in seconds. No debugging, no boilerplate."
+                icon: Rocket,
+                title: "Fast generation",
+                description: "Get working Lua code in seconds. Scripts, UIs, effects, and more."
               },
               {
-                icon: Code2,
-                title: "Direct to Studio",
-                description: "Plugin automatically inserts generated assets. Zero copy-paste."
+                icon: Boxes,
+                title: "Studio integration",
+                description: "Install the plugin and assets appear directly in your game."
               },
               {
-                icon: Shield,
-                title: "Secure & private",
-                description: "Your code stays yours. Nothing is stored or shared."
+                icon: Lock,
+                title: "Private and secure",
+                description: "Your code stays yours. We don't store or share your projects."
               },
             ].map((feature, i) => (
               <div
@@ -144,14 +142,14 @@ export default function LandingPage() {
           <div className="text-center mb-20">
             <p className="text-sm font-medium text-violet-400 mb-3">HOW IT WORKS</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">Three simple steps</h2>
-            <p className="text-white/50">From idea to implementation in seconds.</p>
+            <p className="text-white/50">From idea to working code in seconds.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { step: "01", title: "Describe", desc: "Tell NxtAI what you want in plain English" },
-              { step: "02", title: "Generate", desc: "AI creates production-ready Lua instantly" },
-              { step: "03", title: "Deploy", desc: "Assets appear directly in Roblox Studio" },
+              { step: "01", title: "Describe", desc: "Tell NxtAI what you need in plain English" },
+              { step: "02", title: "Generate", desc: "AI creates production-ready Lua code" },
+              { step: "03", title: "Use it", desc: "Assets sync to Roblox Studio automatically" },
             ].map((item, i) => (
               <div key={i} className="relative">
                 <div className="text-6xl font-bold text-white/5 mb-4">{item.step}</div>
@@ -168,29 +166,65 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Models */}
+      {/* Demo Terminal */}
       <section className="py-32 px-6 border-t border-white/5">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <p className="text-sm font-medium text-violet-400 mb-3">MODELS</p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Multiple AI models</h2>
-            <p className="text-white/50 max-w-md mx-auto">
-              Choose from various models optimized for different tasks.
-            </p>
+            <p className="text-sm font-medium text-violet-400 mb-3">SEE IT IN ACTION</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Watch it work</h2>
+            <p className="text-white/50">Describe what you want, get code instantly.</p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { name: "GPT-4o", desc: "Best for complex logic" },
-              { name: "Claude", desc: "Great for explanations" },
-              { name: "Gemini", desc: "Fast & efficient" },
-              { name: "DeepSeek", desc: "Code specialist" },
-            ].map((model, i) => (
-              <div key={i} className="p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-violet-500/30 transition-colors">
-                <div className="font-medium mb-1">{model.name}</div>
-                <p className="text-xs text-white/40">{model.desc}</p>
+          {/* Animated Terminal */}
+          <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#0d0d0f] shadow-2xl shadow-violet-500/10">
+            {/* Terminal header */}
+            <div className="flex items-center gap-2 px-4 py-3 bg-white/5 border-b border-white/5">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                <div className="w-3 h-3 rounded-full bg-green-500/80" />
               </div>
-            ))}
+              <div className="flex-1 text-center text-xs text-white/40">NxtAI Terminal</div>
+            </div>
+
+            {/* Terminal content */}
+            <div className="p-6 font-mono text-sm leading-relaxed min-h-[300px]">
+              {/* User prompt */}
+              <div className="flex gap-2 mb-4">
+                <span className="text-emerald-400">→</span>
+                <span className="text-white/70">Make a part that kills players on touch</span>
+                <span className="animate-pulse text-white">▋</span>
+              </div>
+
+              {/* AI response */}
+              <div className="text-violet-400 mb-2 animate-fade-in" style={{ animationDelay: '1s', animationFillMode: 'both' }}>
+                ✓ Generating Lua script...
+              </div>
+
+              {/* Code output */}
+              <div className="bg-black/30 rounded-lg p-4 mt-3 border border-white/5 animate-fade-in" style={{ animationDelay: '1.5s', animationFillMode: 'both' }}>
+                <pre className="text-xs sm:text-sm overflow-x-auto">
+                  <code>
+                    <span className="text-pink-400">local</span> <span className="text-white">part</span> <span className="text-white/50">=</span> <span className="text-blue-400">script</span><span className="text-white/50">.</span><span className="text-blue-400">Parent</span>{'\n'}
+                    {'\n'}
+                    <span className="text-pink-400">local function</span> <span className="text-yellow-300">onTouch</span><span className="text-white/50">(</span><span className="text-orange-300">hit</span><span className="text-white/50">)</span>{'\n'}
+                    {'  '}<span className="text-pink-400">local</span> <span className="text-white">humanoid</span> <span className="text-white/50">=</span> <span className="text-orange-300">hit</span><span className="text-white/50">.</span><span className="text-blue-400">Parent</span><span className="text-white/50">:</span><span className="text-yellow-300">FindFirstChild</span><span className="text-white/50">(</span><span className="text-green-400">"Humanoid"</span><span className="text-white/50">)</span>{'\n'}
+                    {'  '}<span className="text-pink-400">if</span> <span className="text-white">humanoid</span> <span className="text-pink-400">then</span>{'\n'}
+                    {'    '}<span className="text-white">humanoid</span><span className="text-white/50">.</span><span className="text-blue-400">Health</span> <span className="text-white/50">=</span> <span className="text-purple-400">0</span>{'\n'}
+                    {'  '}<span className="text-pink-400">end</span>{'\n'}
+                    <span className="text-pink-400">end</span>{'\n'}
+                    {'\n'}
+                    <span className="text-white">part</span><span className="text-white/50">.</span><span className="text-blue-400">Touched</span><span className="text-white/50">:</span><span className="text-yellow-300">Connect</span><span className="text-white/50">(</span><span className="text-yellow-300">onTouch</span><span className="text-white/50">)</span>
+                  </code>
+                </pre>
+              </div>
+
+              {/* Status */}
+              <div className="flex items-center gap-2 mt-4 text-emerald-400 text-xs animate-fade-in" style={{ animationDelay: '2.5s', animationFillMode: 'both' }}>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Synced to Roblox Studio
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -198,9 +232,9 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="py-32 px-6 border-t border-white/5">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to build?</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to try it?</h2>
           <p className="text-white/50 mb-8">
-            Join developers using NxtAI to create amazing Roblox experiences.
+            Start building your next Roblox game with AI assistance.
           </p>
           <Link
             href="/app"
@@ -217,7 +251,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/40">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
-              <Sparkles className="w-3 h-3 text-white" />
+              <Wand2 className="w-3 h-3 text-white" />
             </div>
             <span>NxtAI</span>
           </div>
